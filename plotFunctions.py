@@ -8,7 +8,7 @@ import sys
 import time
 import numpy as np
 
-from DC1_intermediates import enclosingPolygon, printProgress, findRegionPixels, findRegionFOVs
+from intermediates import enclosingPolygon, printProgress, findRegionPixels, findRegionFOVs
 
 __all__= ['plotFOV', 'plotRegion', 'buildAndPlotRegion']
 
