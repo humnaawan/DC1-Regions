@@ -49,7 +49,7 @@ def getSurveyHEALPixRADec(coaddBundle):
                 pixDec[dither].append(temp[1])
     return [pixelNum, pixRA, pixDec]
 
-def getSimData(dbpath, filterBand):
+def getSimData(dbpath, filterBand, extraCols= None):
     """
 
     Get OpSim data columns (for WFD).
@@ -58,6 +58,11 @@ def getSimData(dbpath, filterBand):
     -------------------
       * dbpath: str: path to the OpSim database.
       * filterBand: str: filter to consider, e.g. 'r'
+
+    Optional Parameters
+    -------------------
+      * extraCols: list of str: list of additional columns needed from the database.
+                                e.g. ['expDate', 'obsHistID']
 
     """
     # get the columns we care about in simdata.
@@ -68,7 +73,7 @@ def getSimData(dbpath, filterBand):
     propIds, propTags = opsdb.fetchPropInfo()
     wfdWhere = mafUtils.createSQLWhere('WFD', propTags)
     sqlconstraint= wfdWhere + ' and filter=="' + filterBand + '"'
-    colnames = ['fieldID', 'fieldRA', 'fieldDec', 'rotSkyPos', 'expMJD', 'ditheredRA', 'ditheredDec']
+    colnames = ['fieldID', 'fieldRA', 'fieldDec', 'rotSkyPos', 'expMJD', 'ditheredRA', 'ditheredDec'] + extraCols
     simdata = opsdb.fetchMetricData(colnames, sqlconstraint)
     
     return simdata
