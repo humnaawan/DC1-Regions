@@ -33,7 +33,7 @@ def findDC1Chips(dither, regionPixels, simdataIndex_for_pixel, pixelNum, pixRA, 
                 pointingRA= np.degrees(simdata[index]['ditheredRA'])
                 pointingDec= np.degrees(simdata[index]['ditheredDec'])
             rotSkyPos= np.degrees(simdata[index]['rotSkyPos'])
-            expMJD= np.degrees(simdata[index]['expMJD'])
+            expMJD= simdata[index]['expMJD']
             
             obs = ObservationMetaData(pointingRA= pointingRA, pointingDec= pointingDec,
                                       rotSkyPos= rotSkyPos, mjd= expMJD)
