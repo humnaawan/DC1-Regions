@@ -12,17 +12,26 @@ __all__= ['printProgress', 'getSurveyHEALPixRADec', 'getSimData',
           'getFOVsHEALPixReln', 'enclosingPolygon', 'findRegionPixels',
           'findGoodRegions', 'findRegionFOVs' ]
 
-def printProgress(whatToPrint, highlight= False):
+def printProgress(whatToPrint, highlight= False, newLine= True):
     """
-    Print statements.
+    Print statements while making sure statements are printed before the next thing starts.
 
-    Required Parameter: whatToPrint: str: whatever to print
-    Optional Parameter: highlight: bool: set to True to add a line of ## to highlight the print statement.
+    Required Parameter
+    ------------------
+    whatToPrint: str: whatever to print
+
+    Optional Parameters
+    -------------------
+    * highlight: bool: set to True to add an extra line of ## to highlight the print statement.
+                       Default: False
+    * newline: bool: set to False to not add a new line.
+                     Default: True
 
     """
     append= ''
     if highlight: append= '\n############################################'
-    print append + '#\n## ' + whatToPrint
+    if newLine: print append + '\n## ' + whatToPrint
+    else: print '## ' + whatToPrint
     sys.stdout.flush()
     time.sleep(1.0)
         
