@@ -152,6 +152,8 @@ def buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
 
     if focusDither is None:
         focusDither= coaddBundle.keys()
+    else:
+        focusDither= [focusDither]
         
     for dither in focusDither:
         # need to find all the FOVs involved (even partially)
