@@ -10,7 +10,7 @@ import numpy as np
 
 __all__= ['printProgress', 'getSurveyHEALPixRADec', 'getSimData',
           'getFOVsHEALPixReln', 'enclosingPolygon', 'findRegionPixels',
-          'findGoodRegions', 'findRegionFOVs' ]
+          'findContigFOVs', 'findRegionFOVs', 'findGoodRegions']
 
 def printProgress(whatToPrint, highlight= False, newLine= True):
     """
@@ -60,7 +60,7 @@ def getSurveyHEALPixRADec(coaddBundle):
                 pixDec[dither].append(temp[1])
     return [pixelNum, pixRA, pixDec]
 
-def getSimData(dbpath, filterBand, extraCols= []):
+def getSimData(dbpath, filterBand, extraCols= [], newAfterburner= False):
     """
 
     Get OpSim data columns (for WFD).
@@ -74,6 +74,8 @@ def getSimData(dbpath, filterBand, extraCols= []):
     -------------------
     * extraCols: list of str: list of additional columns needed from the database.
                               e.g. ['expDate', 'obsHistID']
+    * newAfterburner: bool: set to True if the opsim database is using the
+                            new afterbuner. Default: False
 
     """
     # get the columns we care about in simdata.
@@ -84,7 +86,12 @@ def getSimData(dbpath, filterBand, extraCols= []):
     propIds, propTags = opsdb.fetchPropInfo()
     wfdWhere = mafUtils.createSQLWhere('WFD', propTags)
     sqlconstraint= wfdWhere + ' and filter=="' + filterBand + '"'
-    colnames = ['fieldID', 'fieldRA', 'fieldDec', 'rotSkyPos', 'expMJD', 'ditheredRA', 'ditheredDec'] + extraCols
+    if newAfterburner:
+        colnames = ['fieldID', 'fieldRA', 'fieldDec', 'rotSkyPos', 'expMJD',
+                    'hexDitherPerNightRA', 'hexDitherPerNightDec',
+                    'randomDitherFieldPerVisitRA', 'randomDitherFieldPerVisitDec'] + extraCols
+    else:
+        colnames = ['fieldID', 'fieldRA', 'fieldDec', 'rotSkyPos', 'expMJD', 'ditheredRA', 'ditheredDec'] + extraCols
     simdata = opsdb.fetchMetricData(colnames, sqlconstraint)
     
     return simdata
