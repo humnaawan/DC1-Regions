@@ -1,44 +1,143 @@
 import numpy as np
+import lsst.sims.maf.slicers as slicers
 from lsst.obs.lsstSim import LsstSimMapper
 from lsst.sims.utils import ObservationMetaData
 from lsst.sims.coordUtils import chipNameFromRaDec
-    
-def findDC1Chips(dither, regionPixels, simdataIndex_for_pixel, pixelNum, pixRA, pixDec, simdata):
+from intermediates import printProgress, getSimData, findRegionPixels
+import pickle
+import time
+import os
+import datetime
+
+def findDC1Chips(dbpath, fiducialDither, fiducialID,
+                 filterBand= 'r', disc= True, FOV_radius= 0.0305,
+                 saveData= True, outputPath= None):
     """
 
-    Find the chips that are used in the region.
+    Find the chips in each visit that come into play in the region based on
+    the given fieldID.
 
     Required Parameters
     -------------------
-      * dither: str: dither strategy to focus on.
-      * regionPixels: list: list of pixel numbers in the region to plot.
-      * simdataIndex_for_pixel: dict: dictionary with keys= dither strategy. Each key points to a dictionary
-                                      with keys= pixel number, pointing to the list of indices corresponding
-                                      to that pixel in simdata array.
-      * pixelNum, pixelRA, pixelDec: output of getSurveyHEALPixRADec
-      * simdata: output of getSimData (must have fieldRA, fieldDec, ditheredRA, ditheredDec, rotSkyPos, expMJD)
+    * dbpath: str: path to the OpSim database.
+    * fiducialDither: str: observing strategy to base the chips on.
+                           Optional: 'NoDither', 'SequentialHexDitherPerNight'
+    * fiducialID: int: fieldID for the FOV on which to base the region.
+
+    Optional Parameters
+    -------------------
+    * filterBand: str: filter to consider. Default: 'r'
+    * disc: bool: set to False if don't want disc-like region; will implement the one
+                  in intermediates.enclosingRegion. Default: True
+    * FOV_radius: float: radius of the FOV (radians). Default: 0.0305
+    * saveData: bool: set to False if don't want to save the output data (includes
+                      obsIDsList, expDatesList, fIDsList, chipNamesList; saved as a
+                      pickle). Default: True
+    * outputPath: str: path to the output directory where the data should be saved.
+                       If None given, will save in the current working directory.
+                       Default: None
+
+    Outputs
+    -------
+    obsIDsList, expDatesList, fIDsList, chipNamesList
+    Default parameters save the output data as a pickle. See above.
 
     """
-    camera = LsstSimMapper().camera
+    nside= 512   # needed for HEALPix pixels to be smaller than the chips themselves
+    printProgress('Getting simData ... ', highlight= True)
+    simdata= getSimData(dbpath, filterBand, ['expDate', 'obsHistID'])  # need the two extra columns
+                                                                       # to tag different visits.
+    printProgress('Finding region pixels ... ', highlight= True)
+    centralRA, centralDec, regionPixels= findRegionPixels(fiducialID, simdata,
+                                                          nside,
+                                                          disc, FOV_radius)
+    totPixels= len(regionPixels)
+    printProgress('Total number of pixels in the region: %d'%(totPixels))
     
-    chipNames= []
-    for p, pixel in enumerate(regionPixels):
-        simdataInds= simdataIndex_for_pixel[dither][pixel]['idxs']
+    # set up the slicer
+    hpSlicer= slicers.HealpixSlicer(nside= nside)
+    hpSlicer.setupSlicer(simdata)    # slice data: know which pixels are observed in which visit
+    
+    camera = LsstSimMapper().camera
+    chipNames, obsIDs, expDates, fIDs= [], [], [], []
+    
+    prevPercent= 0.
+    startTime= time.time()
+    for p, pixel in enumerate(regionPixels):  # run over all the pixels in the region
+        pixRA, pixDec= hpSlicer._pix2radec(pixel)    # radians returned
+        indObsInPixel = hpSlicer._sliceSimData(pixel)   # indices in simData for when an observation
+                                                        # happened in this pixel
         
-        for index in simdataInds:
-            if (dither=='NoDither'):
-                pointingRA= np.degrees(simdata[index]['fieldRA'])
-                pointingDec= np.degrees(simdata[index]['fieldDec'])
+        for index in indObsInPixel['idxs']:
+            # get data from simdata
+            # for identifying each visit
+            expDate= simdata[index]['expDate']
+            obsID= simdata[index]['obsHistID']
+            fID= simdata[index]['fieldID']
+            
+            # for chip finding
+            if (fiducialDither=='NoDither'):
+                pointingRA= simdata[index]['fieldRA'] # radians
+                pointingDec= simdata[index]['fieldDec'] # radians
             else:
-                pointingRA= np.degrees(simdata[index]['ditheredRA'])
-                pointingDec= np.degrees(simdata[index]['ditheredDec'])
-            rotSkyPos= np.degrees(simdata[index]['rotSkyPos'])
+                fiducialDither= 'SequentialHexDitherPerNight'   # temporary -- update with the new afterburner output
+                pointingRA= simdata[index]['ditheredRA'] # radians
+                pointingDec= simdata[index]['ditheredDec'] # radians
+                
+            rotSkyPos= simdata[index]['rotSkyPos'] # radians
             expMJD= simdata[index]['expMJD']
             
-            obs = ObservationMetaData(pointingRA= pointingRA, pointingDec= pointingDec,
-                                      rotSkyPos= rotSkyPos, mjd= expMJD)
-            i= np.where(pixel==pixelNum[dither])[0][0]
-            chipNames.append(chipNameFromRaDec(np.degrees(pixRA[dither][i]),
-                                               np.degrees(pixDec[dither][i]),
-                                               camera=camera, obs_metadata=obs))
-    return np.unique(chipNames)
+            # set up for the finding the chips
+            obs = ObservationMetaData(pointingRA= np.degrees(pointingRA), pointingDec= np.degrees(pointingDec),
+                                      rotSkyPos= np.degrees(rotSkyPos), mjd= expMJD)
+            chipsInVisit= chipNameFromRaDec(np.degrees(pixRA), np.degrees(pixDec),
+                                            camera=camera, obs_metadata=obs)
+            if chipsInVisit is not None:   # not 100% clear why some pixels don't have any chips.
+                obsIDs.append(obsID)
+                expDates.append(expDate)
+                chipNames.append(chipsInVisit)
+                fIDs.append(fID)
+
+        percentDone= 100.*(p+1)/totPixels
+        delPercent= percentDone-prevPercent
+        if (delPercent>5):
+            printProgress('Percent pixels done: %f \n Time passed (min): %f'%(percentDone, (time.time()-startTime)/60.), newLine= False)
+            prevPercent= percentDone
+        #if (percentDone>1.):
+        #    break
+    obsIDs, expDates, fIDs, chipNames= np.array(obsIDs), np.array(expDates), np.array(fIDs), np.array(chipNames)
+    
+    printProgress('Unique obsHistIDs: %d \n Unique expDates: %d \n Unique chipNames: %d \n'%(len(np.unique(obsIDs)),
+                                                                                             len(np.unique(expDates)),
+                                                                                             len(np.unique(chipNames))), newLine= False)
+
+    #  get rid of repeated entries; consolidate the data from unique observations.
+    printProgress('Consolidating the data ... ', highlight= True)
+    obsIDsList, expDatesList, fIDsList, chipNamesList= [], [], [], []
+    for obs in np.unique(obsIDs):
+        obsIDsList.append(obs)
+        ind= np.where(obsIDs==obs)[0]
+        expDatesList.append(np.unique(expDates[ind]))
+        fIDsList.append(np.unique(fIDs[ind]))
+        chipNamesList.append(np.unique(chipNames[ind]))
+
+    if saveData:
+        printProgress('Saving the data ... ', highlight= True)
+        dataToSave = {'obsHistID': obsIDsList, 'expDate': expDatesList, 'fIDs': fIDsList, 'chipNames': chipNamesList}
+        if outputPath is not None:
+            currentDir= os.getcwd()
+            os.chdir(outputPath)
+
+        shapeTag= ''
+        if disc: shapeTag= 'disc'
+        else: shapeTag= 'nonDisc'
+        filename= '%s_chipPerVisitData_fID%d_%s_%sRegion'%(str(datetime.date.isoformat(datetime.date.today()))
+                                                           , fiducialID, fiducialDither, shapeTag)
+        with open(filename+'.pickle', 'wb') as handle:
+            pickle.dump(dataToSave, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        printProgress('Saved the data as %s.pickle'%(filename), highlight= True)
+        if outputPath is not None:
+            os.chdir(currentDir)
+
+    return [obsIDsList, expDatesList, fIDsList, chipNamesList]
