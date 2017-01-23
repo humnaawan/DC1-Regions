@@ -18,7 +18,7 @@ def printProgress(whatToPrint, highlight= False, newLine= True):
 
     Required Parameter
     ------------------
-    whatToPrint: str: whatever to print
+    * whatToPrint: str: whatever to print
 
     Optional Parameters
     -------------------
@@ -41,8 +41,10 @@ def getSurveyHEALPixRADec(coaddBundle):
     Get the RA, Dec (in radians) corresponding to each HEALPix pixel.
     Method returns three dictionaries with keys= keys in coaddBundle: pixelNumber, pixelRA, pixelDec
 
-    Required Parameter:  coaddBundle: dict: dictionary with keys= observing strategy names, pointing to
-                                            corresponding to a metricBundle object.
+    Required Parameter
+    ------------------
+    * coaddBundle: dict: dictionary with keys= observing strategy names, pointing to
+                         corresponding to a metricBundle object.
 
     """
     # create dictionaries giving pixelNumbers and their correspondong RA, Dec for all dither strategies.
@@ -65,13 +67,13 @@ def getSimData(dbpath, filterBand, extraCols= []):
 
     Required Parameters
     -------------------
-      * dbpath: str: path to the OpSim database.
-      * filterBand: str: filter to consider, e.g. 'r'
+    * dbpath: str: path to the OpSim database.
+    * filterBand: str: filter to consider, e.g. 'r'
 
     Optional Parameters
     -------------------
-      * extraCols: list of str: list of additional columns needed from the database.
-                                e.g. ['expDate', 'obsHistID']
+    * extraCols: list of str: list of additional columns needed from the database.
+                              e.g. ['expDate', 'obsHistID']
 
     """
     # get the columns we care about in simdata.
@@ -91,21 +93,23 @@ def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
     """
 
     Finds the correspondences between different FOVs and HEALPix pixels.
-    Returns two dictionaries (keys= keys in pixelNum): For each keys:
-    1. pixels_in_FOV is a dictionary of keys= fieldID, pointing to the list of HEALPix pixels
-                      corresponding to the FOV.
-    2. simdataIndex_for_pixel is  a dictionary with keys= pixel number, pointing to the list of
-                              indices corresponding to that pixel in simdata array.
+    Returns a dictionary pixels_in_FOV (keys= keys in pixelNum; observing stragies):
+    each key points to a dictionary with keys= fieldID, pointing to the list of HEALPix pixels
+    corresponding to the FOV.
+ 
 
     Required Parameters
     -------------------
-      * pixelNum, pixelRA, pixelDec: output of getSurveyHEALPixRADec
-      * simdata: output of getSimData
+    * pixelNum: dict: keys= observing strategies; pointing to pixelNumbers in the survey region.
+    * simdata: np.array: array containing OpSim columns (must have fieldID for this function).
+
+    Optional Parameters
+    --------------------
+    * nside: int: HEALPix resolution parameters. Default: 256
 
     """
     import lsst.sims.maf.slicers as slicers
     pixels_in_FOV= {}
-    #simdataIndex_for_pixel= {}
 
     for dither in pixelNum:
         pixels_in_FOV[dither]= {}
@@ -130,9 +134,9 @@ def enclosingPolygon(radius, fieldRA, fieldDec):
 
     Required Parameters
     -------------------
-      * radius: float: radius of the FOV in radians.
-      * fieldRA: float: RA (in radians) of the FOV center on which to base the rectangle.
-      * fieldDec: float: Dec (in radians) of the FOV center on which to base the rectangle.
+    * radius: float: radius of the FOV in radians.
+    * fieldRA: float: RA (in radians) of the FOV center on which to base the rectangle.
+    * fieldDec: float: Dec (in radians) of the FOV center on which to base the rectangle.
 
     """
     corners= np.zeros(shape=(4,3))
@@ -159,21 +163,21 @@ def enclosingPolygon(radius, fieldRA, fieldDec):
 
     return corners
 
-def findRegionPixels(fID, simdata, nside, disc, FOV_radius):
+def findRegionPixels(fiducialID, simdata, nside, disc, FOV_radius):
     """
 
     Find the region (disc or rectangular) based on the specified field ID.
 
     Required Parameters
     -------------------
-      * fID: int: fieldID for the FOV on which to base the region.
-      * simdata: np.array: array containing OpSim columns (must have fieldID, fieldRA, fieldDec).
-      * nside: int: HEALPix resolution parameter.
-      * disc: bool: set to true if want disc-like region; False for rectangular.
-      * FOV_radius: float: radius of the FOV in radians.
+    * fiducialID: int: fieldID for the FOV on which to base the region.
+    * simdata: np.array: array containing OpSim columns (must have fieldID, fieldRA, fieldDec).
+    * nside: int: HEALPix resolution parameter.
+    * disc: bool: set to true if want disc-like region; False for rectangular.
+    * FOV_radius: float: radius of the FOV in radians.
 
     """
-    ind= np.where(simdata[:]['fieldID']== fID)[0]
+    ind= np.where(simdata[:]['fieldID']== fiducialID)[0]
     # fieldRA, fieldDec remain fixed for NoDither; dont change with expMJD.
     # use as the 'center' of the enclosing region (disc or rectangle).
     fixedRA= simdata[ind[0]]['fieldRA']
@@ -189,30 +193,28 @@ def findRegionPixels(fID, simdata, nside, disc, FOV_radius):
 
     return [fiducialRA, fiducialDec, diskPixels]
 
-def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius,
-                   simdata,
+def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
                    disc= True, nside= 256):
     """
 
     Find contiguous fields in an undithered survey based on the specified ID;
-    basically will return the IDs of the three fields that surrounding it in the
+    basically will return the IDs of the three fields that surrounding the fiducialID in the
     arrangement set up for the DC1 region.
 
-    Returns the IDs of the three neighbors.
+    Returns the IDs of the three neighbors alongwith the fiducialID.
 
     Required Parameters
     -------------------
-      * fiducialRA: float: RA of fiducial of the region (radians).
-      * fiducialDec: float: Dec of fiducial of the region (radians).
-      * fiducialID: int: fieldID on which the region is based on.
-      * FOV_radius: float: radius of the FOV (radians)
-      * simdata: np.array: array containing OpSim columns (must have fieldID for this function to work).
-      * simdataIndex_for_pixel: dict: dictionary with keys= dither strategy. Each key points to a dictionary
-                                      with keys= pixel number, pointing to the list of indices corresponding
-                                      to that pixel in simdata array.
+    * fiducialRA: float: RA of fiducial center of the region (radians).
+    * fiducialDec: float: Dec of fiducial center of the region (radians).
+    * fiducialID: int: fieldID on which the region is based on.
+    * FOV_radius: float: radius of the FOV (radians)
+    * simdata: np.array: array containing OpSim columns (must have fieldID for this function to work).
+    
     Optional Parameters
     -------------------
-      * disc: bool: set to True if want disc-like region; False for rectangular. Default: True
+    * disc: bool: set to True if want disc-like region; False for rectangular. Default: True
+    * nside: int: HEALPix resolution parameters. Default: 256
 
     """
     import lsst.sims.maf.slicers as slicers
@@ -267,12 +269,13 @@ def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
 
     Required Parameters
     -------------------
-      * regionPixels: array: array containing the HEALPIx pixel numbers in the region of interest.
-      * dither: str: dither strategy to focus on.
-      * simdataIndex_for_pixel: dict: dictionary with keys= dither strategy. Each key points to a dictionary
-                                      with keys= pixel number, pointing to the list of indices corresponding
-                                      to that pixel in simdata array.
-      * simdata: np.array: array containing OpSim columns (must have fieldID for here).
+    * regionPixels: array: array containing the HEALPIx pixel numbers in the region of interest.
+    * dither: str: dither strategy to focus on.
+    * simdata: np.array: array containing OpSim columns (must have fieldID for here).
+    
+    Optional Parameters
+    -------------------
+    * nside: int: HEALPix resolution parameters. Default: 256
 
     """
     import lsst.sims.maf.slicers as slicers
@@ -297,28 +300,29 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     median depth).
 
     Returns: arrays: good pixel numbers, good IDs, difference between mean depth in the region and
-    median survey depth, abs(max-min) region depth, center RA, center Dec
+    median survey depth, abs(max-min) region depth, fiducial RA, fidicual Dec
 
     Required Parameters
     -------------------
-      * simdata: np.array: array containing OpSim columns (must have fieldID, fieldRA, fieldDec).
-      * coaddBundle: dict: dictionary with keys= observing strategy names, pointing to corresponding
-                           to a metricBundle object.
-      * surveyMedianDepth: float: median depth to base the 'goodness' on.
-      * FOV_radius: float: radius of the FOV in radians.
-      * pixels_in_FOV: dict: dictionary with keys= field ID, pointing to the list of HEALPix pixels
+    * focusDither: str: the observing strategy to focus on.
+                        Options: 'NoDither', 'SequentialHexDitherPerNight'.
+    * simdata: np.array: array containing OpSim columns (must have fieldID, fieldRA, fieldDec).
+    * coaddBundle: dict: dictionary with keys= observing strategy names, pointing to corresponding
+                         to a metricBundle object.
+    * FOV_radius: float: radius of the FOV in radians.
+    * pixels_in_FOV: dict: dictionary with keys= field ID, pointing to the list of HEALPix pixels
                              that fall in the FOV.
 
     Optional Parameters
     -------------------
-      * nside: int: HEALPix resolution parameter. Defaut: 256
-      * threshold: float: region will be considered good if average depth in the region is within the
-                          threshold of survey median depth. Default: 0.01
-      * allIDs: bool: set to False to consider only a subset of FOVs; will plot things out. Default: True
-      * IDsToTestWith: list: list of fieldIDs to consider. Default: []
-      * disc: bool: set to True if want disc-like region; False for rectangular. Default: False
-      * raRange: list: constraint on the RA in cartview. Default: [-180,180]
-      * decRange: list: constraint on the Dec in cartview. Default: [-70,10]
+    * nside: int: HEALPix resolution parameter. Defaut: 256
+    * threshold: float: region will be considered good if average depth in the region is within the
+                        threshold of survey median depth. Default: 0.01
+    * allIDs: bool: set to False to consider only a subset of FOVs; will plot things out. Default: True
+    * IDsToTestWith: list: list of fieldIDs to consider. Default: []
+    * disc: bool: set to True if want disc-like region; False for rectangular. Default: False
+    * raRange: list: constraint on the RA in cartview. Default: [-180,180]
+    * decRange: list: constraint on the Dec in cartview. Default: [-70,10]
 
     """
     # a region is 'good' if abs(typicalDepth in the region -surveyMedianDepth)<threshold
@@ -367,7 +371,6 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
             cb = plt.colorbar(im,  orientation='horizontal',
                               format= '%.1f', cax = cbaxes) 
             plt.show()
-
 
     output= {}
     output['regionPixels']= np.array(goodPixelNums)
