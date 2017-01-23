@@ -9,7 +9,7 @@ import time
 import os
 import datetime
 
-def findDC1Chips(dbpath, fiducialDither, fiducialID,
+def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
                  filterBand= 'r', disc= True, FOV_radius= 0.0305,
                  saveData= True, outputPath= None):
     """
@@ -20,8 +20,11 @@ def findDC1Chips(dbpath, fiducialDither, fiducialID,
     Required Parameters
     -------------------
     * dbpath: str: path to the OpSim database.
+    * newAfterburner: bool: set to True if the opsim database is using the 
+                           new afterbuner. If not, False.
     * fiducialDither: str: observing strategy to base the chips on.
-                           Optional: 'NoDither', 'SequentialHexDitherPerNight'
+                           Possibilities: 'NoDither', 'SequentialHexDitherPerNight'
+                           If newAfterburner= True, could also be 'RandomDitherFieldPerVisit'
     * fiducialID: int: fieldID for the FOV on which to base the region.
 
     Optional Parameters
@@ -43,9 +46,20 @@ def findDC1Chips(dbpath, fiducialDither, fiducialID,
     Default parameters save the output data as a pickle. See above.
 
     """
+    if newAfterburner:
+        if (fiducialDither!= 'NoDither') and (fiducialDither!= 'SequentialHexDitherPerNight') and (fiducialDither!= 'RandomDitherFieldPerVisit'):
+            printProgress('Problem: fiducialDither invalid. Must be one of NoDither, SequentialHexDitherPerNight, RandomDitherFieldPerVisit.', highlight= True)
+            return
+    else:
+        if (fiducialDither!= 'NoDither') and (fiducialDither!= 'SequentialHexDitherPerNight'):
+            printProgress('Problem: fiducialDither invalid. Must be one of NoDither or SequentialHexDitherPerNight.', highlight= True)
+            return
+        
     nside= 512   # needed for HEALPix pixels to be smaller than the chips themselves
     printProgress('Getting simData ... ', highlight= True)
-    simdata= getSimData(dbpath, filterBand, ['expDate', 'obsHistID'])  # need the two extra columns
+    simdata= getSimData(dbpath, filterBand,
+                        extraCols= ['expDate', 'obsHistID'],
+                        newAfterburner= newAfterburner)  # need the two extra columns
                                                                        # to tag different visits.
     printProgress('Finding region pixels ... ', highlight= True)
     centralRA, centralDec, regionPixels= findRegionPixels(fiducialID, simdata,
@@ -80,9 +94,17 @@ def findDC1Chips(dbpath, fiducialDither, fiducialID,
                 pointingRA= simdata[index]['fieldRA'] # radians
                 pointingDec= simdata[index]['fieldDec'] # radians
             else:
-                fiducialDither= 'SequentialHexDitherPerNight'   # temporary -- update with the new afterburner output
-                pointingRA= simdata[index]['ditheredRA'] # radians
-                pointingDec= simdata[index]['ditheredDec'] # radians
+                if newAfterburner:
+                    if (fiducialDither=='SequentialHexDitherPerNight'):
+                        pointingRA= simdata[index]['hexDitherPerNightRA'] # radians
+                        pointingDec= simdata[index]['hexDitherPerNightDec'] # radians
+                    else: # above check should've ensured that fiducialDither= 'RandomDitherFieldPerVisit'
+                        pointingRA= simdata[index]['randomDitherFieldPerVisitRA'] # radians
+                        pointingDec= simdata[index]['randomDitherFieldPerVisitDec'] # radians
+                else:
+                    # fiducialDither should be 'SequentialHexDitherPerNight'
+                    pointingRA= simdata[index]['ditheredRA'] # radians
+                    pointingDec= simdata[index]['ditheredDec'] # radians
                 
             rotSkyPos= simdata[index]['rotSkyPos'] # radians
             expMJD= simdata[index]['expMJD']
@@ -138,8 +160,12 @@ def findDC1Chips(dbpath, fiducialDither, fiducialID,
         shapeTag= ''
         if disc: shapeTag= 'disc'
         else: shapeTag= 'nonDisc'
-        filename= '%s_chipPerVisitData_fID%d_%s_%sRegion'%(str(datetime.date.isoformat(datetime.date.today()))
-                                                           , fiducialID, fiducialDither, shapeTag)
+
+        burnerTag= ''
+        if newAfterburner: burnerTag = 'newAfterburnerOutput_'
+        
+        filename= '%s_chipPerVisitData_%sfID%d_%s_%sRegion'%(str(datetime.date.isoformat(datetime.date.today())),
+                                                             burnerTag, fiducialID, fiducialDither, shapeTag)
         with open(filename+'.pickle', 'wb') as handle:
             pickle.dump(dataToSave, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
