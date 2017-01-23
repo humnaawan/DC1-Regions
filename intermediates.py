@@ -189,6 +189,77 @@ def findRegionPixels(fID, simdata, nside, disc, FOV_radius):
 
     return [fiducialRA, fiducialDec, diskPixels]
 
+def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius,
+                   simdata,
+                   disc= True, nside= 256):
+    """
+
+    Find contiguous fields in an undithered survey based on the specified ID;
+    basically will return the IDs of the three fields that surrounding it in the
+    arrangement set up for the DC1 region.
+
+    Returns the IDs of the three neighbors.
+
+    Required Parameters
+    -------------------
+      * fiducialRA: float: RA of fiducial of the region (radians).
+      * fiducialDec: float: Dec of fiducial of the region (radians).
+      * fiducialID: int: fieldID on which the region is based on.
+      * FOV_radius: float: radius of the FOV (radians)
+      * simdata: np.array: array containing OpSim columns (must have fieldID for this function to work).
+      * simdataIndex_for_pixel: dict: dictionary with keys= dither strategy. Each key points to a dictionary
+                                      with keys= pixel number, pointing to the list of indices corresponding
+                                      to that pixel in simdata array.
+    Optional Parameters
+    -------------------
+      * disc: bool: set to True if want disc-like region; False for rectangular. Default: True
+
+    """
+    import lsst.sims.maf.slicers as slicers
+    slicer= slicers.HealpixSlicer(nside= nside)
+    slicer.setupSlicer(simdata)
+    
+    dither= 'NoDither'
+    contList= []
+    contList.append(fiducialID)
+    
+    if disc:
+        # FOV below
+        ra= fiducialRA
+        dec= fiducialDec-FOV_radius*np.sqrt(3)/2.
+        p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
+        ind = slicer._sliceSimData(p)
+        ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
+        if len(np.unique(ids))>1:
+            print 'Something is wrong. Should have only one FOV corresponding to the central pixel.'
+            return
+        contList.append(ids[0])
+        
+        ra= fiducialRA-FOV_radius*3/2.
+        dec= fiducialDec
+        p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
+        ind = slicer._sliceSimData(p)
+        ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
+        if len(np.unique(ids))>1:
+            print 'Something is wrong. Should have only one FOV corresponding to the central pixel.'
+            return
+        contList.append(ids[0])
+        
+        ra= fiducialRA+FOV_radius*3/2.
+        dec= fiducialDec
+        p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
+        ind = slicer._sliceSimData(p)
+        ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
+        if len(np.unique(ids))>1:
+            print 'Something is wrong. Should have only one FOV corresponding to the central pixel.'
+            return
+        contList.append(ids[0])
+
+        return contList
+    else:
+        print 'Not developed the function for anything but disc-like region.'
+        return
+
 def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
     """
 
