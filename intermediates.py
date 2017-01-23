@@ -58,7 +58,7 @@ def getSurveyHEALPixRADec(coaddBundle):
                 pixDec[dither].append(temp[1])
     return [pixelNum, pixRA, pixDec]
 
-def getSimData(dbpath, filterBand, extraCols= None):
+def getSimData(dbpath, filterBand, extraCols= []):
     """
 
     Get OpSim data columns (for WFD).
