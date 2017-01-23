@@ -344,8 +344,9 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
             scatterInDepth.append(abs(max(coaddBundle[focusDither].metricValues.data[diskPixels])-min(coaddBundle[focusDither].metricValues.data[diskPixels])))
             fiducialRAs.append(fiducialRA)
             fiducialDecs.append(fiducialDec)
-            
-        
+            if disc:
+                contigIDs.append(findContigFOVs(fiducialRA, fiducialDec, ID, FOV_radius,
+                                                simdata, disc= True, nside= nside))
         if not allIDs:
             check= copy.deepcopy(coaddBundle[focusDither])
             check.metricValues.data[:]= 0
@@ -375,6 +376,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     output['scatterInDepth']= np.array(scatterInDepth)
     output['fiducialRA']= np.array(fiducialRAs)
     output['fiducialDec']= np.array(fiducialDecs)
+    if disc: output['contigIDs']= np.array(contigIDs)
     
     return output
 
