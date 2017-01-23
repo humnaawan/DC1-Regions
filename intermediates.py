@@ -139,27 +139,15 @@ def enclosingPolygon(radius, fieldRA, fieldDec):
     * fieldDec: float: Dec (in radians) of the FOV center on which to base the rectangle.
 
     """
+    def returnXYZ(ra, dec):
+        c = SkyCoord(ra=ra*u.radian, dec=dec*u.radian)
+        return c.cartesian.xyz
+ 
     corners= np.zeros(shape=(4,3))
-    
-    x_pt= fieldRA+radius
-    y_pt= fieldDec-np.sqrt(3)*radius
-    c = SkyCoord(ra=x_pt*u.radian, dec=y_pt*u.radian)
-    corners[0,]= c.cartesian.xyz
-    
-    x_pt= fieldRA+radius
-    y_pt= fieldDec+np.sqrt(3)*radius
-    c = SkyCoord(ra=x_pt*u.radian, dec=y_pt*u.radian)
-    corners[1,]= c.cartesian.xyz
-    
-    x_pt= fieldRA-4*radius
-    y_pt= fieldDec+np.sqrt(3)*radius
-    c = SkyCoord(ra=x_pt*u.radian, dec=y_pt*u.radian)
-    corners[2,]= c.cartesian.xyz
-    
-    x_pt= fieldRA-4*radius
-    y_pt= fieldDec-np.sqrt(3)*radius
-    c = SkyCoord(ra=x_pt*u.radian, dec=y_pt*u.radian)
-    corners[3,]= c.cartesian.xyz
+    corners[0,]= returnXYZ(fieldRA+radius, fieldDec-np.sqrt(3)*radius)
+    corners[1,]= returnXYZ(fieldRA+radius, fieldDec+np.sqrt(3)*radius)
+    corners[2,]= returnXYZ(fieldRA-4*radius, fieldDec+np.sqrt(3)*radius)
+    corners[3,]= returnXYZ(fieldRA-4*radius, fieldDec-np.sqrt(3)*radius)
 
     return corners
 
