@@ -179,15 +179,15 @@ def findRegionPixels(fID, simdata, nside, disc, FOV_radius):
     fixedRA= simdata[ind[0]]['fieldRA']
     fixedDec= simdata[ind[0]]['fieldDec']
     if not disc:
-        centralRA, centralDec= fixedRA, fixedDec
-        corners= enclosingPolygon(FOV_radius, centralRA, centralDec)
+        fiducialRA, fiducialDec= fixedRA, fixedDec
+        corners= enclosingPolygon(FOV_radius, fiducialRA, fiducialDec)
         diskPixels= hp.query_polygon(nside, corners)    # HEALpixel numbers
     else:
-        centralRA, centralDec= fixedRA, fixedDec-FOV_radius*np.sqrt(3)/2.
-        c = SkyCoord(ra=centralRA*u.radian, dec= centralDec*u.radian)
+        fiducialRA, fiducialDec= fixedRA, fixedDec-FOV_radius*np.sqrt(3)/2.
+        c = SkyCoord(ra=fiducialRA*u.radian, dec= fiducialDec*u.radian)
         diskPixels= hp.query_disc(nside= nside, vec=c.cartesian.xyz, radius= 2.5*FOV_radius)
 
-    return [centralRA, centralDec, diskPixels]
+    return [fiducialRA, fiducialDec, diskPixels]
 
 def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
     """
