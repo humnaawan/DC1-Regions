@@ -71,12 +71,10 @@ def plotFOV(coaddBundle, pixels_in_FOV, IDs, filterBand,
             cbaxes = fig.add_axes([0.1, 0.25, 0.8, 0.04]) # [left, bottom, width, height]
             cb = plt.colorbar(im,  orientation='horizontal',
                               format= '%.1f', cax = cbaxes) 
-            #cb.set_label(str(filterBand + '-Band Coadded Depth'), fontsize=18)
-            #cb.ax.tick_params(labelsize= 18)
             plt.show()
 
 
-def plotRegion(coaddBundle, dithStrategy, pixels_in_FOV, centerIDs, regionPixels, filterBand= 'i',
+def plotRegion(coaddBundle, dithStrategy, pixels_in_FOV, fiducialIDs, regionPixels, filterBand= 'i',
                raRange= [-180,180], decRange= [-70,10]):
     """
 
@@ -90,7 +88,7 @@ def plotRegion(coaddBundle, dithStrategy, pixels_in_FOV, centerIDs, regionPixels
       * pixels_in_FOV: dict: dictionary with keys= dither strategy. Each key points to a dictionary with
                              keys= field ID, pointing to the list of HEALPix pixels
                              that fall in the FOV.
-      * centerIDs: list: list of fieldIDs on which the region(s) are based.
+      * fiducialIDs: list: list of fieldIDs on which the region(s) are based.
       * regionPixels: list: list of list of pixel numbers in the region to plot, i.e.
                             ith list contains the pixels corresponding to ith ID in IDs.
 
@@ -102,7 +100,7 @@ def plotRegion(coaddBundle, dithStrategy, pixels_in_FOV, centerIDs, regionPixels
 
     """
     check= copy.deepcopy(coaddBundle[dithStrategy])
-    for i, ID in enumerate(centerIDs):
+    for i, ID in enumerate(fiducialIDs):
         check.metricValues.data[:]= 0
         check.metricValues.data[regionPixels[i]]= 1000.
         check.metricValues.data[pixels_in_FOV[dithStrategy][ID]]= 26.4
@@ -119,12 +117,10 @@ def plotRegion(coaddBundle, dithStrategy, pixels_in_FOV, centerIDs, regionPixels
         cbaxes = fig.add_axes([0.1, 0.25, 0.8, 0.04]) # [left, bottom, width, height]
         cb = plt.colorbar(im,  orientation='horizontal',
                     format= '%.1f', cax = cbaxes) 
-        #cb.set_label(filterBand + '-Band Coadded Depth', fontsize=18)
-        #cb.ax.tick_params(labelsize= 18)
         plt.show()
         
 def buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius,
-                       pixels_in_FOV, simdataIndex_for_pixel,
+                       pixels_in_FOV, focusDither= None,
                        nside= 256, disc= False,):
     """
 
@@ -155,10 +151,13 @@ def buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius,
     centralRA, centralDec, regionPixels= findRegionPixels(fID, simdata, nside, disc, FOV_radius)
     centralLat= np.pi/2. - centralDec
     centralPix = hp.ang2pix(nside= 256, theta= centralLat, phi= centralRA)
-    
-    for dither in coaddBundle:
+
+    if focusDither is None:
+        focusDither= coaddBundle.keys()
+        
+    for dither in focusDither:
         # need to find all the FOVs involved (even partially)
-        idList= findRegionFOVs(regionPixels, dither, simdataIndex_for_pixel, simdata)
+        idList= findRegionFOVs(regionPixels, dither, simdata, nside= 256)
         print 'FID List for %s: [%s]' % (dither,  ", ".join([str(x) for x in idList]))
             
         check= copy.deepcopy(coaddBundle[dither])
@@ -185,7 +184,7 @@ def buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius,
                     min= max([min(coaddBundle[dither].metricValues.data), 0]),
                     title= '', cbar=False)
         hp.graticule(dpar=20, dmer=20, verbose=False)
-        plt.title(dither + ': fID containing regionCenter: ' + str(fID) , size= 22)
+        plt.title(dither + ': fID containing fiducialCenter: ' + str(fID) , size= 22)
         ax = plt.gca()
         im = ax.get_images()[0]
         fig= plt.gcf()
@@ -208,7 +207,7 @@ def buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius,
                     min= max([min(coaddBundle[dither].metricValues.data), 0]),
                     title= '', cbar=False)
         hp.graticule(dpar=20, dmer=20, verbose=False)
-        plt.title(dither + ': fID containing regionCenter: ' + str(fID) , size= 22)
+        plt.title(dither + ': fID containing fiducialCenter: ' + str(fID) , size= 22)
         ax = plt.gca()
         im = ax.get_images()[0]
         fig= plt.gcf()
