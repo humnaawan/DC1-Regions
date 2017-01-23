@@ -121,6 +121,13 @@ def findDC1Chips(dbpath, fiducialDither, fiducialID,
         fIDsList.append(np.unique(fIDs[ind]))
         chipNamesList.append(np.unique(chipNames[ind]))
 
+    # see how many chips are added by any given visit
+    numChips= []
+    for i in range(len(obsIDsList)):
+        numChips.append(len(chipNamesList[i]))
+    printProgress('Max number of chips added by any given visit: %d \n Min number: %d'%(max(numChips), min(numChips)), highlight= True)
+
+    # save the data?
     if saveData:
         printProgress('Saving the data ... ', highlight= True)
         dataToSave = {'obsHistID': obsIDsList, 'expDate': expDatesList, 'fIDs': fIDsList, 'chipNames': chipNamesList}
