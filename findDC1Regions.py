@@ -42,7 +42,7 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
     simdata= getSimData(dbpath, filterBand)    # contains fieldID, fieldRA, fieldDec, rotSkyPos, expMJD, ditheredRA, ditheredDec
     
     printProgress('Getting pixels_in_FOV ...', highlight= True)
-    pixels_in_FOV, simdataIndex_for_pixel= getFOVsHEALPixReln(pixelNum, pixRA, pixDec, simdata) # each output is a dicitonary.
+    pixels_in_FOV= getFOVsHEALPixReln(pixelNum, simdata, nside= nside) # each output is a dicitonary.
 
     #########################################################################################################################
     if plotTestPlots:
@@ -55,39 +55,37 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
         fID= 1421
         printProgress('Code test: buildAndPlotRegion: Plots with a RECTANGULAR region of interest ...')
         buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius, nside= nside,
-                           pixels_in_FOV= pixels_in_FOV, simdataIndex_for_pixel= simdataIndex_for_pixel,
+                           pixels_in_FOV= pixels_in_FOV,
                            disc= False)
         printProgress('Code test: buildAndPlotRegion: Plots with a CIRCULAR region of interest ...')
         buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius, nside= nside,
-                            pixels_in_FOV= pixels_in_FOV, simdataIndex_for_pixel= simdataIndex_for_pixel,
+                            pixels_in_FOV= pixels_in_FOV,
                            disc= True)
     ########################################################################################################################
     printProgress('Finding good regions ...', highlight= True)
-    surveyMedianDepth= {}
+    
     if (len(coaddBundle.keys())==1): # only NoDither provided.
         focusDither= 'NoDither'
     else:
         for dither in coaddBundle.keys():
             if (dither != 'NoDither'): focusDither= dither
-    surveyMedianDepth[focusDither]= np.median(coaddBundle[focusDither].metricValues.data[pixelNum[focusDither]])
-    printProgress('Mean survey depth for %s: %f'% (focusDither, surveyMedianDepth[focusDither]))
-
+            
     printProgress('Finding good regions with threshold= %f using %s' % (threshold, focusDither), highlight= True)
-    output_rect= findGoodRegions(simdata, coaddBundle, surveyMedianDepth, FOV_radius, pixels_in_FOV, 
+    output_rect= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
                                  allIDs= True, nside= nside,
                                  disc= False, threshold= threshold)
-    output_disc= findGoodRegions(simdata, coaddBundle, surveyMedianDepth, FOV_radius, pixels_in_FOV, 
+    output_disc= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
                                  allIDs= True, nside= nside,
                                  disc= True, threshold= threshold)
 
     printProgress('Plotting good regions with threshold= %f using %s' % (threshold, focusDither), highlight= True)
     printProgress('Rectangular regions (using plotRegion):')
     plotRegion(coaddBundle,focusDither, pixels_in_FOV,
-               output_rect[1], output_rect[0], filterBand= filterBand)
+               output_rect['goodFiducialIDs'], output_rect['regionPixels'], filterBand= filterBand)
     printProgress('Cicular regions (using plotRegion):')
     plotRegion(coaddBundle, focusDither, pixels_in_FOV,
-               output_disc[1], output_disc[0], filterBand= filterBand)
+               output_disc['goodFiducialIDs'], output_disc['regionPixels'], filterBand= filterBand)
     if returnAll:
-        return [focusDither, output_rect, output_disc, simdata, pixels_in_FOV, simdataIndex_for_pixel, pixelNum, pixRA, pixDec]
+        return [focusDither, output_rect, output_disc, simdata, pixels_in_FOV, pixelNum, pixRA, pixDec]
     else:
         return [focusDither, output_rect, output_disc]
