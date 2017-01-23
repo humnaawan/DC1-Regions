@@ -87,7 +87,7 @@ def getSimData(dbpath, filterBand, extraCols= []):
     
     return simdata
     
-def getFOVsHEALPixReln(pixelNum, pixRA, pixDec, simdata):
+def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
     """
 
     Finds the correspondences between different FOVs and HEALPix pixels.
@@ -103,29 +103,25 @@ def getFOVsHEALPixReln(pixelNum, pixRA, pixDec, simdata):
       * simdata: output of getSimData
 
     """
-    # each of pixelNum, pixRA, pixDec is a dicitonary.
     import lsst.sims.maf.slicers as slicers
     pixels_in_FOV= {}
-    simdataIndex_for_pixel= {}
+    #simdataIndex_for_pixel= {}
 
     for dither in pixelNum:
         pixels_in_FOV[dither]= {}
-        simdataIndex_for_pixel[dither]= {}
-        slicer = slicers.UserPointsSlicer(ra= pixRA[dither], dec= pixDec[dither])   # inputting radians (<=> HEALPix survey pixels)
+        slicer= slicers.HealpixSlicer(nside= nside)
         slicer.setupSlicer(simdata)
-    
-        for i in range(len(slicer)):  # running over only the sky pixels
-            ind = slicer._sliceSimData(i)
-            simdataIndex_for_pixel[dither][pixelNum[dither][i]]= ind
-            ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
+
+        for pixel in pixelNum[dither]:
+            indObsInPixel = slicer._sliceSimData(pixel)
+            ids = simdata[indObsInPixel['idxs']]['fieldID']   # fieldIDs corresponding to pixel
             for uniqID in np.unique(ids):
                 key= uniqID
                 if key not in pixels_in_FOV[dither].keys():
                     pixels_in_FOV[dither][key]= []
-                pixels_in_FOV[dither][key].append(pixelNum[dither][i])
+                pixels_in_FOV[dither][key].append(pixel)
     print 'Number of fieldIDs in pixel_in_FOV for %s: %f' %(dither, len(pixels_in_FOV[dither].keys()))
-    return [pixels_in_FOV, simdataIndex_for_pixel]
-
+    return pixels_in_FOV
 
 def enclosingPolygon(radius, fieldRA, fieldDec):
     """
@@ -193,7 +189,7 @@ def findRegionPixels(fID, simdata, nside, disc, FOV_radius):
 
     return [centralRA, centralDec, diskPixels]
 
-def findRegionFOVs(regionPixels, dither, simdataIndex_for_pixel, simdata):
+def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
     """
 
     Find the FOVs that corresponds to any HEALPix pixels in the region.
@@ -208,15 +204,19 @@ def findRegionFOVs(regionPixels, dither, simdataIndex_for_pixel, simdata):
       * simdata: np.array: array containing OpSim columns (must have fieldID for here).
 
     """
+    import lsst.sims.maf.slicers as slicers
+    slicer= slicers.HealpixSlicer(nside= nside)
+    slicer.setupSlicer(simdata)
+    
     idList= []
     for p in regionPixels:
-        ind= simdataIndex_for_pixel[dither][p]
+        ind = slicer._sliceSimData(p)
         ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
         uniqID= np.unique(ids)
         idList+= list(uniqID)
     return np.unique(idList)
 
-def findGoodRegions(simdata, coaddBundle, surveyMedianDepth, FOV_radius, pixels_in_FOV,
+def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
                     nside= 256, threshold= 0.01,
                     allIDs= True, IDsToTestWith= [],
                     disc= False,  raRange= [-180,180], decRange= [-70,10]):
@@ -251,32 +251,32 @@ def findGoodRegions(simdata, coaddBundle, surveyMedianDepth, FOV_radius, pixels_
 
     """
     # a region is 'good' if abs(typicalDepth in the region -surveyMedianDepth)<threshold
-    goodIDs= []
-    goodPixelNums= []
-    scatterInDepth= []
-    diffMeanMedian= []
-    centerRA= []
-    centerDec= []
+    goodCenterIDs, goodPixelNums, scatterInDepth, diffMeanMedian, fiducialRAs, fiducialDecs, contigIDs= [], [], [], [], [], [], []
     
-    focusDither= surveyMedianDepth.keys()[0]
+    inSurvey= np.where(coaddBundle[focusDither].metricValues.mask==False)[0]
+    surveyMedianDepth= np.median(coaddBundle[focusDither].metricValues.data[inSurvey])
+    printProgress('Mean survey depth for %s: %f'% (focusDither, surveyMedianDepth))
+    
     considerIDs= pixels_in_FOV[focusDither].keys()
     if not allIDs: considerIDs= IDsToTestWith
         
     for ID in considerIDs:
-        centralRA, centralDec, diskPixels= findRegionPixels(ID, simdata, nside, disc, FOV_radius)
+        fiducialRA, fiducialDec, diskPixels= findRegionPixels(ID, simdata, nside, disc, FOV_radius)
 
         typicalDepth= np.mean(coaddBundle[focusDither].metricValues.data[diskPixels])
-        diff= abs(typicalDepth-surveyMedianDepth[focusDither])
-        if (diff<threshold): 
-            goodIDs.append(ID)
+        diff= abs(typicalDepth-surveyMedianDepth)
+        
+        if (diff<threshold):
+            goodCenterIDs.append(ID)
             goodPixelNums.append(diskPixels)
             diffMeanMedian.append(diff)
             scatterInDepth.append(abs(max(coaddBundle[focusDither].metricValues.data[diskPixels])-min(coaddBundle[focusDither].metricValues.data[diskPixels])))
-            centerRA.append(centralRA)
-            centerDec.append(centralDec)
+            fiducialRAs.append(fiducialRA)
+            fiducialDecs.append(fiducialDec)
             
+        
         if not allIDs:
-            check= copy.deepcopy(coaddBundle[[focusDither]])
+            check= copy.deepcopy(coaddBundle[focusDither])
             check.metricValues.data[:]= 0
             check.metricValues.data[diskPixels]= 1000.
             check.metricValues.data[pixels_in_FOV[focusDither][ID]]= 26.4
@@ -294,10 +294,16 @@ def findGoodRegions(simdata, coaddBundle, surveyMedianDepth, FOV_radius, pixels_
             cbaxes = fig.add_axes([0.1, 0.25, 0.8, 0.04]) # [left, bottom, width, height]
             cb = plt.colorbar(im,  orientation='horizontal',
                               format= '%.1f', cax = cbaxes) 
-            #cb.set_label(str('i-Band Coadded Depth'), fontsize=18)
-            #cb.ax.tick_params(labelsize= 18)
             plt.show()
-            
-    return [np.array(goodPixelNums), np.array(goodIDs), np.array(diffMeanMedian), np.array(scatterInDepth), np.array(centerRA), np.array(centerDec)]
 
+
+    output= {}
+    output['regionPixels']= np.array(goodPixelNums)
+    output['goodFiducialIDs']= np.array(goodCenterIDs)
+    output['diffMeanMedian']= np.array(diffMeanMedian)
+    output['scatterInDepth']= np.array(scatterInDepth)
+    output['fiducialRA']= np.array(fiducialRAs)
+    output['fiducialDec']= np.array(fiducialDecs)
+    
+    return output
 
