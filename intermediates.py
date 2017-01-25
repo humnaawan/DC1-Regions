@@ -2,7 +2,7 @@ import healpy as hp
 import matplotlib.pyplot as plt
 import copy
 from astropy import units as u
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, Galactic
 import pandas as pd
 import sys
 import time
@@ -321,7 +321,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
 
     """
     # a region is 'good' if abs(typicalDepth in the region -surveyMedianDepth)<threshold
-    goodCenterIDs, goodPixelNums, scatterInDepth, diffMeanMedian, fiducialRAs, fiducialDecs, contigIDs= [], [], [], [], [], [], []
+    goodCenterIDs, goodPixelNums, scatterInDepth, diffMeanMedian, fiducialRAs, fiducialDecs, contigIDs, fiducialGalacticLat= [], [], [], [], [], [], [], []
     
     inSurvey= np.where(coaddBundle[focusDither].metricValues.mask==False)[0]
     surveyMedianDepth= np.median(coaddBundle[focusDither].metricValues.data[inSurvey])
@@ -343,6 +343,8 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
             scatterInDepth.append(abs(max(coaddBundle[focusDither].metricValues.data[diskPixels])-min(coaddBundle[focusDither].metricValues.data[diskPixels])))
             fiducialRAs.append(fiducialRA)
             fiducialDecs.append(fiducialDec)
+            c= SkyCoord(ra= fiducialRA*u.radian, dec= fiducialDec*u.radian)
+            fiducialGalacticLat.append(c.transform_to(Galactic).b.radian)
             if disc:
                 contigIDs.append(findContigFOVs(fiducialRA, fiducialDec, ID, FOV_radius,
                                                 simdata, disc= True, nside= nside))
@@ -374,7 +376,8 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     output['scatterInDepth']= np.array(scatterInDepth)
     output['fiducialRA']= np.array(fiducialRAs)
     output['fiducialDec']= np.array(fiducialDecs)
-    if disc: output['contigIDs']= np.array(contigIDs)
+    output['fiducialGalacticLat']= np.array(fiducialGalacticLat)
+    if disc: output['contigIDs']= contigIDs
     
     return output
 
