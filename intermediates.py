@@ -131,7 +131,7 @@ def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
                 if key not in pixels_in_FOV[dither].keys():
                     pixels_in_FOV[dither][key]= []
                 pixels_in_FOV[dither][key].append(pixel)
-    print 'Number of fieldIDs in pixel_in_FOV for %s: %f' %(dither, len(pixels_in_FOV[dither].keys()))
+    print 'Number of fieldIDs in pixel_in_FOV for %s: %d' %(dither, len(pixels_in_FOV[dither].keys()))
     return pixels_in_FOV
 
 def enclosingPolygon(radius, fieldRA, fieldDec):
@@ -216,7 +216,6 @@ def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
     slicer= slicers.HealpixSlicer(nside= nside)
     slicer.setupSlicer(simdata)
     
-    dither= 'NoDither'
     contList= []
     contList.append(fiducialID)
     
@@ -227,31 +226,31 @@ def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
         p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
         ind = slicer._sliceSimData(p)
         ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
-        if len(np.unique(ids))>1:
-            print 'Something is wrong. Should have only one FOV corresponding to the central pixel.'
-            return
-        contList.append(ids[0])
+        uniqID= np.unique(ids)
+        if len(uniqID)>1:
+            print 'Something is wrong. Should have only one FOV corresponding to the central pixel (fID: %d) but have %s'%(fiducialID, uniqID)
+        contList.append(uniqID[:])
         
         ra= fiducialRA-FOV_radius*3/2.
         dec= fiducialDec
         p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
         ind = slicer._sliceSimData(p)
         ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
-        if len(np.unique(ids))>1:
-            print 'Something is wrong. Should have only one FOV corresponding to the central pixel.'
-            return
-        contList.append(ids[0])
+        uniqID= np.unique(ids)
+        if len(uniqID)>1:
+            print 'Something is wrong. Should have only one FOV corresponding to the central pixel (fID: %d) but have %s'%(fiducialID, uniqID)
+        contList.append(uniqID[:])
         
         ra= fiducialRA+FOV_radius*3/2.
         dec= fiducialDec
         p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
         ind = slicer._sliceSimData(p)
         ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
-        if len(np.unique(ids))>1:
-            print 'Something is wrong. Should have only one FOV corresponding to the central pixel.'
-            return
-        contList.append(ids[0])
-
+        uniqID= np.unique(ids)
+        if len(uniqID)>1:
+            print 'Something is wrong. Should have only one FOV corresponding to the central pixel (fID: %d) but have %s'%(fiducialID, uniqID)
+        contList.append(uniqID[:])
+        
         return contList
     else:
         print 'Not developed the function for anything but disc-like region.'
