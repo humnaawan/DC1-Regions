@@ -199,7 +199,7 @@ def findRegionPixels(fiducialID, simdata, nside, disc, FOV_radius):
             fixedRA= simdata[ind[0]]['fieldRA']
             fixedDec= simdata[ind[0]]['fieldDec']
             c = SkyCoord(ra=fixedRA*u.radian, dec= fixedDec*u.radian)
-            regionPixels= hp.query_disc(nside= nside, vec=c.cartesian.xyz, radius= FOV_radius)
+            regionPixels= hp.query_disc(nside= nside, vec=c.cartesian.xyz, radius= FOV_radius, inclusive= True)
         
             allPixels+= list(regionPixels)
         regionPixels= np.unique(allPixels)
