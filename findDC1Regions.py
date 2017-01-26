@@ -53,7 +53,7 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
     
         printProgress('Code test: Plotting regions using buildAndPlotRegion ...', highlight= True)
         fID= 1421
-        printProgress('Code test: buildAndPlotRegion: Plots with a RECTANGULAR region of interest ...')
+        printProgress('Code test: buildAndPlotRegion: Plots with a NON-DISC region of interest ...')
         buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius, nside= nside,
                            pixels_in_FOV= pixels_in_FOV,
                            disc= False)
@@ -71,7 +71,7 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
             if (dither != 'NoDither'): focusDither= dither
             
     printProgress('Finding good regions with threshold= %f using %s' % (threshold, focusDither), highlight= True)
-    output_rect= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
+    output_nonDisc= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
                                  allIDs= True, nside= nside,
                                  disc= False, threshold= threshold)
     output_disc= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
@@ -81,11 +81,11 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
     printProgress('Plotting good regions with threshold= %f using %s' % (threshold, focusDither), highlight= True)
     printProgress('Rectangular regions (using plotRegion):')
     plotRegion(coaddBundle,focusDither, pixels_in_FOV,
-               output_rect['goodFiducialIDs'], output_rect['regionPixels'], filterBand= filterBand)
+               output_nonDisc['goodFiducialIDs'], output_nonDisc['regionPixels'], filterBand= filterBand)
     printProgress('Cicular regions (using plotRegion):')
     plotRegion(coaddBundle, focusDither, pixels_in_FOV,
                output_disc['goodFiducialIDs'], output_disc['regionPixels'], filterBand= filterBand)
     if returnAll:
-        return [focusDither, output_rect, output_disc, simdata, pixels_in_FOV, pixelNum, pixRA, pixDec]
+        return [focusDither, output_nonDisc, output_disc, simdata, pixels_in_FOV, pixelNum, pixRA, pixDec]
     else:
-        return [focusDither, output_rect, output_disc]
+        return [focusDither, output_nonDisc, output_disc]
