@@ -179,14 +179,36 @@ def findRegionPixels(fiducialID, simdata, nside, disc, FOV_radius):
     fixedDec= simdata[ind[0]]['fieldDec']
     if not disc:
         fiducialRA, fiducialDec= fixedRA, fixedDec
-        corners= enclosingPolygon(FOV_radius, fiducialRA, fiducialDec)
-        diskPixels= hp.query_polygon(nside, corners)    # HEALpixel numbers
+        #corners= enclosingPolygon(FOV_radius, fiducialRA, fiducialDec)
+        #regionPixels= hp.query_polygon(nside, corners)    # HEALpixel numbers
+        
+        contigIDList= findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
+                                     disc= False, nside= nside)
+
+        # flatten the list:
+        flatList= []
+        for ID in contigIDList:
+            if ((type(ID)==np.ndarray) or (type(ID)==list)):
+                for i in range(len(ID)):
+                    flatList.append(ID[i])
+            else:
+                flatList.append(ID)
+        allPixels= []
+        for ID in flatList:
+            ind= np.where(simdata[:]['fieldID']== ID)[0]
+            fixedRA= simdata[ind[0]]['fieldRA']
+            fixedDec= simdata[ind[0]]['fieldDec']
+            c = SkyCoord(ra=fixedRA*u.radian, dec= fixedDec*u.radian)
+            regionPixels= hp.query_disc(nside= nside, vec=c.cartesian.xyz, radius= FOV_radius)
+        
+            allPixels+= list(regionPixels)
+        regionPixels= np.unique(allPixels)
     else:
         fiducialRA, fiducialDec= fixedRA, fixedDec-FOV_radius*np.sqrt(3)/2.
         c = SkyCoord(ra=fiducialRA*u.radian, dec= fiducialDec*u.radian)
-        diskPixels= hp.query_disc(nside= nside, vec=c.cartesian.xyz, radius= 2.5*FOV_radius)
+        regionPixels= hp.query_disc(nside= nside, vec=c.cartesian.xyz, radius= 2.5*FOV_radius)
 
-    return [fiducialRA, fiducialDec, diskPixels]
+    return [fiducialRA, fiducialDec, regionPixels]
 
 def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
                    disc= True, nside= 256):
