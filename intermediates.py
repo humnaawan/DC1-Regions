@@ -344,7 +344,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
 
     """
     # a region is 'good' if abs(typicalDepth in the region -surveyMedianDepth)<threshold
-    goodCenterIDs, goodPixelNums, rangeInDepth, diffMeanMedian, fiducialRAs, fiducialDecs, contigIDs, fiducialGalacticLat= [], [], [], [], [], [], [], []
+    goodCenterIDs, goodPixelNums, rangeInDepth, diffMedianRegionSurvey, fiducialRAs, fiducialDecs, contigIDs, fiducialGalacticLat= [], [], [], [], [], [], [], []
     
     inSurvey= np.where(coaddBundle[focusDither].metricValues.mask==False)[0]
     surveyMedianDepth= np.median(coaddBundle[focusDither].metricValues.data[inSurvey])
@@ -356,13 +356,13 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     for ID in considerIDs:
         fiducialRA, fiducialDec, regionPixels= findRegionPixels(ID, simdata, nside, disc, FOV_radius)
 
-        typicalDepth= np.mean(coaddBundle[focusDither].metricValues.data[regionPixels])
+        typicalDepth= np.median(coaddBundle[focusDither].metricValues.data[regionPixels])
         diff= abs(typicalDepth-surveyMedianDepth)
         
         if (diff<threshold):
             goodCenterIDs.append(ID)
             goodPixelNums.append(regionPixels)
-            diffMeanMedian.append(diff)
+            diffMedianRegionSurvey.append(diff)
             rangeInDepth.append(abs(max(coaddBundle[focusDither].metricValues.data[regionPixels])-min(coaddBundle[focusDither].metricValues.data[regionPixels])))
             fiducialRAs.append(fiducialRA)
             fiducialDecs.append(fiducialDec)
@@ -394,7 +394,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     output= {}
     output['regionPixels']= np.array(goodPixelNums)
     output['goodFiducialIDs']= np.array(goodCenterIDs)
-    output['diffMeanMedian']= np.array(diffMeanMedian)
+    output['diffMedianRegionSurvey']= np.array(diffMedianRegionSurvey)
     output['rangeInDepth']= np.array(rangeInDepth)
     output['fiducialRA']= np.array(fiducialRAs)
     output['fiducialDec']= np.array(fiducialDecs)
