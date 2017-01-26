@@ -213,48 +213,50 @@ def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
 
     """
     import lsst.sims.maf.slicers as slicers
-    slicer= slicers.HealpixSlicer(nside= nside)
+    slicer= slicers.HealpixSlicer(nside= nside, verbose= False)
     slicer.setupSlicer(simdata)
     
+    def returnIDs(ra, dec):
+        p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
+        ind = slicer._sliceSimData(p)
+        ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
+        uniqID= np.unique(ids)
+        #if len(uniqID)>1:
+        #    print 'Should really have only one FOV corresponding to the central pixel (fID: %d) but have %s'%(fiducialID, uniqID)
+        return list(uniqID)
+
     contList= []
     contList.append(fiducialID)
-    
+
     if disc:
+        # assume given fiduvicalRA, Dec are the center of the big disc.
         # FOV below
         ra= fiducialRA
         dec= fiducialDec-FOV_radius*np.sqrt(3)/2.
-        p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
-        ind = slicer._sliceSimData(p)
-        ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
-        uniqID= np.unique(ids)
-        if len(uniqID)>1:
-            print 'Something is wrong. Should have only one FOV corresponding to the central pixel (fID: %d) but have %s'%(fiducialID, uniqID)
-        contList.append(uniqID[:])
+        contList+= returnIDs(ra, dec)
         
         ra= fiducialRA-FOV_radius*3/2.
         dec= fiducialDec
-        p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
-        ind = slicer._sliceSimData(p)
-        ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
-        uniqID= np.unique(ids)
-        if len(uniqID)>1:
-            print 'Something is wrong. Should have only one FOV corresponding to the central pixel (fID: %d) but have %s'%(fiducialID, uniqID)
-        contList.append(uniqID[:])
+        contList+= returnIDs(ra, dec)
         
         ra= fiducialRA+FOV_radius*3/2.
         dec= fiducialDec
-        p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
-        ind = slicer._sliceSimData(p)
-        ids = simdata[ind['idxs']]['fieldID']   # fieldIDs corresponding to pixelNum[i]
-        uniqID= np.unique(ids)
-        if len(uniqID)>1:
-            print 'Something is wrong. Should have only one FOV corresponding to the central pixel (fID: %d) but have %s'%(fiducialID, uniqID)
-        contList.append(uniqID[:])
-        
-        return contList
+        contList+= returnIDs(ra, dec)
     else:
-        print 'Not developed the function for anything but disc-like region.'
-        return
+        # FOV below
+        ra= fiducialRA
+        dec= fiducialDec-2*FOV_radius*np.sqrt(3)/2.
+        contList+= returnIDs(ra, dec)
+        
+        ra= fiducialRA-FOV_radius*3/2.
+        dec= fiducialDec-FOV_radius*np.sqrt(3)/2.
+        contList+= returnIDs(ra, dec)
+    
+        ra= fiducialRA+FOV_radius*3/2.
+        dec= fiducialDec-FOV_radius*np.sqrt(3)/2.
+        contList+= returnIDs(ra, dec)
+        
+    return np.unique(contList)
 
 def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
     """
