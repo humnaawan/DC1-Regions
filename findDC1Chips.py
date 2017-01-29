@@ -10,6 +10,7 @@ import os
 import datetime
 
 def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
+                 addRotDither= False,
                  filterBand= 'r', disc= True, FOV_radius= 0.0305,
                  saveData= True, outputPath= None):
     """
@@ -29,6 +30,8 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
 
     Optional Parameters
     -------------------
+    * addRotDither: bool: set to True to add (random) rotational dithers; will only work
+                          if newAfterburner= True. Default: False
     * filterBand: str: filter to consider. Default: 'r'
     * disc: bool: set to False if don't want disc-like region; will implement the one
                   in intermediates.enclosingRegion. Default: True
@@ -54,11 +57,18 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
         if (fiducialDither!= 'NoDither') and (fiducialDither!= 'SequentialHexDitherPerNight'):
             printProgress('Problem: fiducialDither invalid. Must be one of NoDither or SequentialHexDitherPerNight.', highlight= True)
             return
+
+    if addRotDither and not newAfterburner:
+        printProgress('Problem: need the new afterburner output to add rotational dithers.', highlight= True)
+        return
         
     nside= 512   # needed for HEALPix pixels to be smaller than the chips themselves
+    extraCols= ['expDate', 'obsHistID']
+    if addRotDither: extraCols+=['ditheredRotTelPos', 'rotTelPos']
+    
     printProgress('Getting simData ... ', highlight= True)
     simdata= getSimData(dbpath, filterBand,
-                        extraCols= ['expDate', 'obsHistID'],
+                        extraCols= extraCols,
                         newAfterburner= newAfterburner)  # need the two extra columns
                                                                        # to tag different visits.
     printProgress('Finding region pixels ... ', highlight= True)
@@ -105,8 +115,12 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
                     # fiducialDither should be 'SequentialHexDitherPerNight'
                     pointingRA= simdata[index]['ditheredRA'] # radians
                     pointingDec= simdata[index]['ditheredDec'] # radians
-                
-            rotSkyPos= simdata[index]['rotSkyPos'] # radians
+            if addRotDither:
+                parallacticAngle= simdata[index]['rotTelPos']-simdata[index]['rotSkyPos']
+                ditheredRotSkyPos= simdata[index]['ditheredRotTelPos']-parallacticAngle
+                rotSkyPos= ditheredRotSkyPos
+            else:
+                rotSkyPos= simdata[index]['rotSkyPos'] # radians
             expMJD= simdata[index]['expMJD']
             
             # set up for the finding the chips
@@ -123,13 +137,13 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
         percentDone= 100.*(p+1)/totPixels
         delPercent= percentDone-prevPercent
         if (delPercent>5):
-            printProgress('Percent pixels done: %f \n Time passed (min): %f'%(percentDone, (time.time()-startTime)/60.), newLine= False)
+            printProgress('%f%% pixels done\nTime passed (min): %f'%(percentDone, (time.time()-startTime)/60.), newLine= False)
             prevPercent= percentDone
         #if (percentDone>1.):
         #    break
     obsIDs, expDates, fIDs, chipNames= np.array(obsIDs), np.array(expDates), np.array(fIDs), np.array(chipNames)
     
-    printProgress('Unique obsHistIDs: %d \n Unique expDates: %d \n Unique chipNames: %d \n'%(len(np.unique(obsIDs)),
+    printProgress('Unique obsHistIDs: %d \n## Unique expDates: %d \n## Unique chipNames: %d \n'%(len(np.unique(obsIDs)),
                                                                                              len(np.unique(expDates)),
                                                                                              len(np.unique(chipNames))), newLine= False)
 
@@ -147,8 +161,8 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
     numChips= []
     for i in range(len(obsIDsList)):
         numChips.append(len(chipNamesList[i]))
-    printProgress('Max number of chips added by any given visit: %d \n Min number: %d'%(max(numChips), min(numChips)), highlight= True)
-
+    printProgress('Max number of chips added by any given visit: %d \n## Min number: %d \n## Total number of chips (across all visits to be simulated): %d'
+                  %(max(numChips), min(numChips), sum(numChips)), highlight= True)
     # save the data?
     if saveData:
         printProgress('Saving the data ... ', highlight= True)
@@ -163,9 +177,11 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
 
         burnerTag= ''
         if newAfterburner: burnerTag = 'newAfterburnerOutput_'
-        
-        filename= '%s_chipPerVisitData_%sfID%d_%s_%sRegion'%(str(datetime.date.isoformat(datetime.date.today())),
-                                                             burnerTag, fiducialID, fiducialDither, shapeTag)
+        rotDitherTag= ''
+        if addRotDither: rotDitherTag= 'randomRotDithered_'
+        filename= '%s_chipPerVisitData_%sfID%d_%s_%s%sRegion_%dTotChipsToSimulate'%(str(datetime.date.isoformat(datetime.date.today())),
+                                                                                      burnerTag, fiducialID, fiducialDither,
+                                                                                      rotDitherTag, shapeTag, sum(numChips))
         with open(filename+'.pickle', 'wb') as handle:
             pickle.dump(dataToSave, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
