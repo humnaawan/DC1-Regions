@@ -311,11 +311,11 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
                     disc= False,  raRange= [-180,180], decRange= [-70,10]):
     """
 
-    Find good regions (i.e. regions with average depth within specified threshold of survey
-    median depth).
+    Find good regions (i.e. regions with median depth within specified threshold of survey
+    median depth AND with max depth-min depth within a specific threshold).
 
-    Returns: arrays: good pixel numbers, good IDs, difference between mean depth in the region and
-    median survey depth, abs(max-min) region depth, fiducial RA, fidicual Dec
+    Returns: arrays: good pixel numbers, good IDs, difference between median depth in the region and
+    median survey depth, abs(max-min) region depth, fiducial RA, fiduciual Dec
 
     Required Parameters
     -------------------
@@ -331,8 +331,11 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     Optional Parameters
     -------------------
     * nside: int: HEALPix resolution parameter. Defaut: 256
-    * depthDiffThreshold: float: region will be considered good if average depth in the region is within the
-                        threshold of survey median depth. Default: 0.01
+    * depthDiffThreshold: float: region will be considered good if median depth in the region is within
+                                 this threshold of survey median depth. Default: 0.01
+    * rangeThreshold: flat: region will be considered if good if range of depth in the region (i.e. 
+                            difference max-min depth) is within the specified rangeThreshold.
+                            Default: 0.3
     * allIDs: bool: set to False to consider only a subset of FOVs; will plot things out. Default: True
     * IDsToTestWith: list: list of fieldIDs to consider. Default: []
     * disc: bool: set to True if want disc-like region; False for rectangular. Default: False

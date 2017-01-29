@@ -7,8 +7,9 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
                    returnAll= False):
     """
 
-    Find candidate regions for DC1 (based on how wildly the average depth in the region 
-    differs from the survey median depth).
+    Find candidate regions for DC1 (based on how wildly the median depth in the region 
+    differs from the survey median depth and how wildly the max and min depth in ther region
+    differ).
 
     Returns a bunch of stuff ...
 
@@ -25,14 +26,16 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
       * plotTestPlots: bool: set to False if dont want to plot things for debugging/testing code.
                              Default: True
       * filterBand: str: filter to consider. Default: 'i'
-      * threshold: float: region will be considered good if average depth in the region is within the
-                          threshold of survey median depth. Default: 0.0001
+      * depthDiffThreshold: float: region will be considered good if median depth in the region is within
+                                   this threshold of survey median depth. Default: 0.005
+      * rangeThreshold: flat: region will be considered if good if range of depth in the region (i.e. 
+                              difference max-min depth) is within the specified rangeThreshold.
+                              Default: 0.5
       * nside: int: HEALPix resolution parameter. Defaut: 256
-      * returnAll: bool: set to True to get (things needed to find chips.. ):
-                         [focusDither, output_rect, output_disc, simdata, pixels_in_FOV,
-                                                   simdataIndex_for_pixel, pixelNum, pixRA, pixDec]
+      * returnAll: bool: set to True to get:
+                         [focusDither, output, simdata, pixels_in_FOV, pixelNum]
                          Default: False returns:
-                         [focusDither, output_rect, output_disc]
+                         [focusDither, output]
     """
     FOV_radius= 0.0305
     printProgress('Getting RA, Dec for HEALPix pixels ...', highlight= True)
