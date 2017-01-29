@@ -306,7 +306,7 @@ def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
     return np.unique(idList)
 
 def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
-                    nside= 256, threshold= 0.01,
+                    nside= 256, depthDiffThreshold= 0.01, rangeThreshold= 0.3,
                     allIDs= True, IDsToTestWith= [],
                     disc= False,  raRange= [-180,180], decRange= [-70,10]):
     """
@@ -331,7 +331,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     Optional Parameters
     -------------------
     * nside: int: HEALPix resolution parameter. Defaut: 256
-    * threshold: float: region will be considered good if average depth in the region is within the
+    * depthDiffThreshold: float: region will be considered good if average depth in the region is within the
                         threshold of survey median depth. Default: 0.01
     * allIDs: bool: set to False to consider only a subset of FOVs; will plot things out. Default: True
     * IDsToTestWith: list: list of fieldIDs to consider. Default: []
@@ -340,8 +340,9 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     * decRange: list: constraint on the Dec in cartview. Default: [-70,10]
 
     """
-    # a region is 'good' if abs(typicalDepth in the region -surveyMedianDepth)<threshold
-    goodCenterIDs, goodPixelNums, rangeInDepth, diffMedianRegionSurvey, fiducialRAs, fiducialDecs, contigIDs, fiducialGalacticLat= [], [], [], [], [], [], [], []
+    # a region is 'good' if abs(median depth in the region -surveyMedianDepth)<depthDiffThreshold and rangeDepth in the region < rangeThreshold
+    goodCenterIDs, goodPixelNums, rangeInDepth, diffMedianRegionSurvey= [], [], [], []
+    fiducialRAs, fiducialDecs, contigIDs, fiducialGalacticLat=  [], [], [], []
     
     inSurvey= np.where(coaddBundle[focusDither].metricValues.mask==False)[0]
     surveyMedianDepth= np.median(coaddBundle[focusDither].metricValues.data[inSurvey])
@@ -349,24 +350,30 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     
     considerIDs= pixels_in_FOV[focusDither].keys()
     if not allIDs: considerIDs= IDsToTestWith
-        
+
+    printProgress('Checking for regions with median depth within %f of the median survey depth AND depth range < %f'
+                  % (depthDiffThreshold, rangeThreshold))
     for ID in considerIDs:
         fiducialRA, fiducialDec, regionPixels= findRegionPixels(ID, simdata, nside, disc, FOV_radius)
 
-        typicalDepth= np.median(coaddBundle[focusDither].metricValues.data[regionPixels])
-        diff= abs(typicalDepth-surveyMedianDepth)
-        
-        if (diff<threshold):
-            goodCenterIDs.append(ID)
-            goodPixelNums.append(regionPixels)
-            diffMedianRegionSurvey.append(diff)
-            rangeInDepth.append(abs(max(coaddBundle[focusDither].metricValues.data[regionPixels])-min(coaddBundle[focusDither].metricValues.data[regionPixels])))
-            fiducialRAs.append(fiducialRA)
-            fiducialDecs.append(fiducialDec)
-            c= SkyCoord(ra= fiducialRA*u.radian, dec= fiducialDec*u.radian)
-            fiducialGalacticLat.append(c.transform_to(Galactic).b.radian)
-            contigIDs.append(findContigFOVs(fiducialRA, fiducialDec, ID, FOV_radius,
-                                            simdata, disc= disc, nside= nside))
+
+        notInSurvey= np.where(coaddBundle[focusDither].metricValues.mask[regionPixels]==True)[0]
+        if not (len(notInSurvey)>0): # the whole region is in the survey
+            typicalDepth= np.median(coaddBundle[focusDither].metricValues.data[regionPixels])
+            diffDepth= abs(typicalDepth-surveyMedianDepth)
+            depthRange= abs(max(coaddBundle[focusDither].metricValues.data[regionPixels])-min(coaddBundle[focusDither].metricValues.data[regionPixels]))
+            
+            if ((diffDepth<depthDiffThreshold) and (depthRange<rangeThreshold)):
+                goodCenterIDs.append(ID)
+                goodPixelNums.append(regionPixels)
+                diffMedianRegionSurvey.append(diffDepth)
+                rangeInDepth.append(depthRange)
+                fiducialRAs.append(fiducialRA)
+                fiducialDecs.append(fiducialDec)
+                c= SkyCoord(ra= fiducialRA*u.radian, dec= fiducialDec*u.radian)
+                fiducialGalacticLat.append(c.transform_to(Galactic).b.radian)
+                contigIDs.append(findContigFOVs(fiducialRA, fiducialDec, ID, FOV_radius,
+                                                simdata, disc= disc, nside= nside))
         if not allIDs:
             check= copy.deepcopy(coaddBundle[focusDither])
             check.metricValues.data[:]= 0
@@ -388,6 +395,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
                               format= '%.1f', cax = cbaxes) 
             plt.show()
 
+    printProgress('Total number of good regions founds: %d'%(len(goodCenterIDs)), highlight= True)
     output= {}
     output['regionPixels']= np.array(goodPixelNums)
     output['goodFiducialIDs']= np.array(goodCenterIDs)
