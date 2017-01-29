@@ -3,7 +3,7 @@ from plotFunctions import *
 from intermediates import *
 
 def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
-                   filterBand= 'i', threshold= 0.0001, nside= 256,
+                   filterBand= 'i', depthDiffThreshold= 0.005, rangeThreshold= 0.5, nside= 256,
                    returnAll= False):
     """
 
@@ -70,22 +70,25 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
         for dither in coaddBundle.keys():
             if (dither != 'NoDither'): focusDither= dither
             
-    printProgress('Finding good regions with threshold= %f using %s' % (threshold, focusDither), highlight= True)
-    output_nonDisc= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
-                                 allIDs= True, nside= nside,
-                                 disc= False, threshold= threshold)
-    output_disc= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
-                                 allIDs= True, nside= nside,
-                                 disc= True, threshold= threshold)
+    printProgress('Finding good regions with depthDiffThreshold= %f and rangeDepth= %f using %s'
+                  % (depthDiffThreshold, rangeThreshold, focusDither), highlight= True)
+    output= {}
+    #output['nonDisc']= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
+    #                             allIDs= True, nside= nside,
+    #                             disc= False, depthDiffThreshold= depthDiffThreshold, rangeThreshold= rangeThreshold)
+    
+    output['disc']= findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
+                                    allIDs= True, nside= nside,
+                                    disc= True, depthDiffThreshold= depthDiffThreshold, rangeThreshold= rangeThreshold)
 
-    printProgress('Plotting good regions with threshold= %f using %s' % (threshold, focusDither), highlight= True)
-    printProgress('Rectangular regions (using plotRegion):')
-    plotRegion(coaddBundle,focusDither, pixels_in_FOV,
-               output_nonDisc['goodFiducialIDs'], output_nonDisc['regionPixels'], filterBand= filterBand)
-    printProgress('Cicular regions (using plotRegion):')
-    plotRegion(coaddBundle, focusDither, pixels_in_FOV,
-               output_disc['goodFiducialIDs'], output_disc['regionPixels'], filterBand= filterBand)
+    printProgress('Plotting good regions ... ', highlight= True)
+
+    for key in output:
+        printProgress('%s regions (using plotRegion):'%(key))
+        plotRegion(coaddBundle, focusDither, pixels_in_FOV,
+                   output[key]['goodFiducialIDs'], output[key]['regionPixels'], filterBand= filterBand)
+        
     if returnAll:
-        return [focusDither, output_nonDisc, output_disc, simdata, pixels_in_FOV, pixelNum, pixRA, pixDec]
+        return [focusDither, output, simdata, pixels_in_FOV, pixelNum]
     else:
-        return [focusDither, output_nonDisc, output_disc]
+        return [focusDither, output]
