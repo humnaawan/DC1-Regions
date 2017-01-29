@@ -114,13 +114,12 @@ def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
 
     """
     import lsst.sims.maf.slicers as slicers
+    slicer= slicers.HealpixSlicer(nside= nside)
+    slicer.setupSlicer(simdata)
+    
     pixels_in_FOV= {}
-
     for dither in pixelNum:
         pixels_in_FOV[dither]= {}
-        slicer= slicers.HealpixSlicer(nside= nside)
-        slicer.setupSlicer(simdata)
-
         for pixel in pixelNum[dither]:
             indObsInPixel = slicer._sliceSimData(pixel)
             ids = simdata[indObsInPixel['idxs']]['fieldID']   # fieldIDs corresponding to pixel
