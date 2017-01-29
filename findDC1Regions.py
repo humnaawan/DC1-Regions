@@ -36,7 +36,7 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
     """
     FOV_radius= 0.0305
     printProgress('Getting RA, Dec for HEALPix pixels ...', highlight= True)
-    pixelNum, pixRA, pixDec= getSurveyHEALPixRADec(coaddBundle)   # each output is a dicitonary.
+    pixelNum= getSurveyHEALPixRADec(coaddBundle)   # each output is a dicitonary.
     
     printProgress('Getting simdata ...', highlight= True)
     simdata= getSimData(dbpath, filterBand)    # contains fieldID, fieldRA, fieldDec, rotSkyPos, expMJD, ditheredRA, ditheredDec
