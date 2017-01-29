@@ -39,7 +39,7 @@ def getSurveyHEALPixRADec(coaddBundle):
     """
 
     Get the RA, Dec (in radians) corresponding to each HEALPix pixel.
-    Method returns three dictionaries with keys= keys in coaddBundle: pixelNumber, pixelRA, pixelDec
+    Method returns a dictionary with keys= keys in coaddBundle: pixelNumber
 
     Required Parameter
     ------------------
@@ -49,16 +49,14 @@ def getSurveyHEALPixRADec(coaddBundle):
     """
     # create dictionaries giving pixelNumbers and their correspondong RA, Dec for all dither strategies.
     # need to worry about each strategy separately since the mask is generally different.
-    pixelNum, pixRA, pixDec= {}, {}, {}
+    pixelNum= {}
     for dither in coaddBundle:
-        pixelNum[dither], pixRA[dither], pixDec[dither]= [], [], []
+        pixelNum[dither]= []
         for pix in range(len(coaddBundle[dither].slicer)):
             if not coaddBundle[dither].metricValues.mask[pix]:   # only consider the unmasked pixels
-                temp= coaddBundle[dither].slicer._pix2radec(pix)    # radians returned
                 pixelNum[dither].append(pix)
-                pixRA[dither].append(temp[0])
-                pixDec[dither].append(temp[1])
-    return [pixelNum, pixRA, pixDec]
+
+    return pixelNum
 
 def getSimData(dbpath, filterBand, extraCols= [], newAfterburner= False):
     """
