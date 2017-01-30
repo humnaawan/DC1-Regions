@@ -15,27 +15,29 @@ def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
 
     Required Parameters
     -------------------
-      * coaddBundle: dict: dictionary with keys= observing strategy names, pointing to corresponding
-                           to a metricBundle object.
-           NOTE: coaddBundle should have always have NoDither. If want to find regions based on a dithered
-                 survey, the bundle should have the dithered data ALONG WITH the undithered one.
-      * dbpath: str: path to the OpSim database.
+    * coaddBundle: dict: dictionary with keys= observing strategy names, pointing to
+                         corresponding to a metricBundle object.
+         NOTE: coaddBundle should have always have NoDither. If want to find regions based
+               on a dithered survey, the bundle should have the dithered data ALONG WITH
+               the undithered one.
+    * dbpath: str: path to the OpSim database.
 
     Optional Parameters
     -------------------
-      * plotTestPlots: bool: set to False if dont want to plot things for debugging/testing code.
-                             Default: True
-      * filterBand: str: filter to consider. Default: 'i'
-      * depthDiffThreshold: float: region will be considered good if median depth in the region is within
-                                   this threshold of survey median depth. Default: 0.005
-      * rangeThreshold: flat: region will be considered if good if range of depth in the region (i.e. 
-                              difference max-min depth) is within the specified rangeThreshold.
-                              Default: 0.5
-      * nside: int: HEALPix resolution parameter. Defaut: 256
-      * returnAll: bool: set to True to get:
-                         [focusDither, output, simdata, pixels_in_FOV, pixelNum]
-                         Default: False returns:
-                         [focusDither, output]
+    * plotTestPlots: bool: set to False if dont want to plot things for debugging/testing
+                           code. Default: True
+    * filterBand: str: filter to consider. Default: 'i'
+    * depthDiffThreshold: float: region will be considered good if median depth in the region
+                                 is within this threshold of survey median depth.
+                                 Default: 0.005
+    * rangeThreshold: flat: region will be considered if good if range of depth in the region
+                            (i.e. difference max-min depth) is within this threshold.
+                            Default: 0.5
+    * nside: int: HEALPix resolution parameter. Defaut: 256
+    * returnAll: bool: set to True to get:
+                      [focusDither, output, simdata, pixels_in_FOV, pixelNum]
+                       Default: False returns:
+                      [focusDither, output]
     """
     FOV_radius= 0.0305
     printProgress('Getting RA, Dec for HEALPix pixels ...', highlight= True)
