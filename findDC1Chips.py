@@ -32,6 +32,8 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
     -------------------
     * addRotDither: bool: set to True to add (random) rotational dithers; will only work
                           if newAfterburner= True. Default: False
+      ***** NOTE: assume here that the parallactic angle does not change with rotational
+                  dithers; not entirely accurate.
     * filterBand: str: filter to consider. Default: 'r'
     * disc: bool: set to False if don't want disc-like region; will implement the one
                   in intermediates.enclosingRegion. Default: True
@@ -116,6 +118,8 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
                     pointingRA= simdata[index]['ditheredRA'] # radians
                     pointingDec= simdata[index]['ditheredDec'] # radians
             if addRotDither:
+                ### NOTE: assuming that the parallactic angle does not change with rotational dithers,
+                ###       which is not entirely accurate.
                 parallacticAngle= simdata[index]['rotTelPos']-simdata[index]['rotSkyPos']
                 ditheredRotSkyPos= simdata[index]['ditheredRotTelPos']-parallacticAngle
                 rotSkyPos= ditheredRotSkyPos
@@ -145,7 +149,7 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
     
     printProgress('Unique obsHistIDs: %d \n## Unique expDates: %d \n## Unique chipNames: %d \n'%(len(np.unique(obsIDs)),
                                                                                              len(np.unique(expDates)),
-                                                                                             len(np.unique(chipNames))), newLine= False)
+                                                                                                 len(np.unique(chipNames))), newLine= True)
 
     #  get rid of repeated entries; consolidate the data from unique observations.
     printProgress('Consolidating the data ... ', highlight= True)
