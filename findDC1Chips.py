@@ -10,7 +10,7 @@ import os
 import datetime
 
 def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
-                 addRotDither= False,
+                 addRotDither= False, nside= 512,
                  filterBand= 'r', disc= True, FOV_radius= 0.0305,
                  saveData= True, outputPath= None):
     """
@@ -64,7 +64,7 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
         printProgress('Problem: need the new afterburner output to add rotational dithers.', highlight= True)
         return
         
-    nside= 512   # needed for HEALPix pixels to be smaller than the chips themselves
+    #nside= 512   # needed for HEALPix pixels to be smaller than the chips themselves
     extraCols= ['expDate', 'obsHistID']
     if addRotDither: extraCols+=['ditheredRotTelPos', 'rotTelPos']
     
