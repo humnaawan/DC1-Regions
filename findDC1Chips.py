@@ -132,11 +132,12 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
                                       rotSkyPos= np.degrees(rotSkyPos), mjd= expMJD)
             chipsInVisit= chipNameFromRaDec(np.degrees(pixRA), np.degrees(pixDec),
                                             camera=camera, obs_metadata=obs)
-            if chipsInVisit is not None:   # not 100% clear why some pixels don't have any chips.
-                obsIDs.append(obsID)
-                expDates.append(expDate)
-                chipNames.append(chipsInVisit)
-                fIDs.append(fID)
+            if chipsInVisit is not None:
+                 if not (chipsInVisit.__contains__('A')) and not (chipsInVisit.__contains__('B')): # no wavefront sensors
+                     obsIDs.append(obsID)
+                     expDates.append(expDate)
+                     chipNames.append(chipsInVisit)
+                     fIDs.append(fID)
 
         percentDone= 100.*(p+1)/totPixels
         delPercent= percentDone-prevPercent
