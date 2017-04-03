@@ -47,7 +47,7 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
 
     Outputs
     -------
-    obsIDsList, expDatesList, fIDsList, chipNamesList
+    obsIDsList, expDatesList, fIDsList, chipNamesList, pixNumsList
     Default parameters save the output data as a pickle. See above.
 
     """
@@ -85,7 +85,7 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
     hpSlicer.setupSlicer(simdata)    # slice data: know which pixels are observed in which visit
     
     camera = LsstSimMapper().camera
-    chipNames, obsIDs, expDates, fIDs= [], [], [], []
+    chipNames, obsIDs, expDates, fIDs, pixNums= [], [], [], [], []
     
     prevPercent= 0.
     startTime= time.time()
@@ -138,6 +138,7 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
                      expDates.append(expDate)
                      chipNames.append(chipsInVisit)
                      fIDs.append(fID)
+                     pixNums.append(pixel)
 
         percentDone= 100.*(p+1)/totPixels
         delPercent= percentDone-prevPercent
@@ -146,22 +147,23 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
             prevPercent= percentDone
         #if (percentDone>1.):
         #    break
-    obsIDs, expDates, fIDs, chipNames= np.array(obsIDs), np.array(expDates), np.array(fIDs), np.array(chipNames)
+    obsIDs, expDates, fIDs, chipNames, pixNums= np.array(obsIDs), np.array(expDates), np.array(fIDs), np.array(chipNames), np.array(pixNums)
     
     printProgress('Unique obsHistIDs: %d \n## Unique expDates: %d \n## Unique chipNames: %d \n'%(len(np.unique(obsIDs)),
-                                                                                             len(np.unique(expDates)),
+                                                                                                 len(np.unique(expDates)),
                                                                                                  len(np.unique(chipNames))), newLine= True)
 
     #  get rid of repeated entries; consolidate the data from unique observations.
     printProgress('Consolidating the data ... ', highlight= True)
-    obsIDsList, expDatesList, fIDsList, chipNamesList= [], [], [], []
+    obsIDsList, expDatesList, fIDsList, chipNamesList, pixNumsList= [], [], [], [], []
     for obs in np.unique(obsIDs):
         obsIDsList.append(obs)
         ind= np.where(obsIDs==obs)[0]
         expDatesList.append(np.unique(expDates[ind]))
         fIDsList.append(np.unique(fIDs[ind]))
         chipNamesList.append(np.unique(chipNames[ind]))
-
+        pixNumsList.append(np.unique(pixNums[ind]))
+        
     # see how many chips are added by any given visit
     numChips= []
     for i in range(len(obsIDsList)):
@@ -171,7 +173,9 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
     # save the data?
     if saveData:
         printProgress('Saving the data ... ', highlight= True)
-        dataToSave = {'obsHistID': obsIDsList, 'expDate': expDatesList, 'fIDs': fIDsList, 'chipNames': chipNamesList}
+        dataToSave = {'obsHistID': obsIDsList, 'expDate': expDatesList,
+                      'fIDs': fIDsList, 'chipNames': chipNamesList,
+                      'pixNum': pixNumsList}
         if outputPath is not None:
             currentDir= os.getcwd()
             os.chdir(outputPath)
@@ -194,4 +198,4 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
         if outputPath is not None:
             os.chdir(currentDir)
 
-    return [obsIDsList, expDatesList, fIDsList, chipNamesList]
+    return [obsIDsList, expDatesList, fIDsList, chipNamesList, pixNumsList]
