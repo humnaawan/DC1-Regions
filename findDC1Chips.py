@@ -69,14 +69,13 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
     extraCols= ['expDate', 'obsHistID']
     if addRotDither: extraCols+=['ditheredRotTelPos', 'rotTelPos']
     
-    printProgress('Getting simData ... ', highlight= True)
+    printProgress(datetime.datetime.isoformat(datetime.datetime.now())+'\nGetting simData ... ', highlight= True)
     simdata= getSimData(dbpath, filterBand,
                         extraCols= extraCols,
-                        newAfterburner= newAfterburner)  # need the two extra columns
-                                                                       # to tag different visits.
+                        newAfterburner= newAfterburner)  # need the two extra columns to tag different visits.
 
-    pointingRACol, pointingDecCol, rotSkyCol= [], [], []
     # set up
+    pointingRACol, pointingDecCol, rotSkyCol= [], [], []
     if (fiducialDither=='NoDither'):
         pointingRACol= 'fieldRA'
         pointingDecCol= 'fieldDec'
