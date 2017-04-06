@@ -8,6 +8,7 @@ import pickle
 import time
 import os
 import datetime
+from numpy.lib.recfunctions import append_fields
 
 def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
                  addRotDither= False, nside= 512,
@@ -73,6 +74,37 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
                         extraCols= extraCols,
                         newAfterburner= newAfterburner)  # need the two extra columns
                                                                        # to tag different visits.
+
+    pointingRACol, pointingDecCol, rotSkyCol= [], [], []
+    # set up
+    if (fiducialDither=='NoDither'):
+        pointingRACol= 'fieldRA'
+        pointingDecCol= 'fieldDec'
+    else:
+        if newAfterburner:
+            if (fiducialDither=='SequentialHexDitherPerNight'):
+                pointingRACol= 'hexDitherPerNightRA'
+                pointingDecCol= 'hexDitherPerNightDec'
+            else:
+                # above check should've ensured that fiducialDither= 'RandomDitherFieldPerVisit'
+                pointingRACol= 'randomDitherFieldPerVisitRA'
+                pointingDecCol= 'randomDitherFieldPerVisitDec'
+        else:
+            # fiducialDither should be 'SequentialHexDitherPerNight'
+            pointingRACol= 'ditheredRA'
+            pointingDecCol= 'ditheredDec'
+
+    if addRotDither:
+        ### NOTE: assuming that the parallactic angle does not change with rotational dithers,
+        ###       which is not entirely accurate.
+        parallacticAngle= simdata['rotTelPos']-simdata['rotSkyPos'][:]
+        ditheredRotSkyPos= simdata['ditheredRotTelPos'][:]-parallacticAngle
+        simdata = append_fields(simdata, 'ditheredRotSkyPos', ditheredRotSkyPos,
+                                dtypes= ditheredRotSkyPos.dtype, usemask=False, asrecarray=False)
+        rotSkyCol= 'ditheredRotSkyPos'
+    else:
+        rotSkyCol= 'rotSkyPos'
+        
     printProgress('Finding region pixels ... ', highlight= True)
     centralRA, centralDec, regionPixels= findRegionPixels(fiducialID, simdata,
                                                           nside,
@@ -109,29 +141,9 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
             fID= simdata[index]['fieldID']
             
             # for chip finding
-            if (fiducialDither=='NoDither'):
-                pointingRA= simdata[index]['fieldRA'] # radians
-                pointingDec= simdata[index]['fieldDec'] # radians
-            else:
-                if newAfterburner:
-                    if (fiducialDither=='SequentialHexDitherPerNight'):
-                        pointingRA= simdata[index]['hexDitherPerNightRA'] # radians
-                        pointingDec= simdata[index]['hexDitherPerNightDec'] # radians
-                    else: # above check should've ensured that fiducialDither= 'RandomDitherFieldPerVisit'
-                        pointingRA= simdata[index]['randomDitherFieldPerVisitRA'] # radians
-                        pointingDec= simdata[index]['randomDitherFieldPerVisitDec'] # radians
-                else:
-                    # fiducialDither should be 'SequentialHexDitherPerNight'
-                    pointingRA= simdata[index]['ditheredRA'] # radians
-                    pointingDec= simdata[index]['ditheredDec'] # radians
-            if addRotDither:
-                ### NOTE: assuming that the parallactic angle does not change with rotational dithers,
-                ###       which is not entirely accurate.
-                parallacticAngle= simdata[index]['rotTelPos']-simdata[index]['rotSkyPos']
-                ditheredRotSkyPos= simdata[index]['ditheredRotTelPos']-parallacticAngle
-                rotSkyPos= ditheredRotSkyPos
-            else:
-                rotSkyPos= simdata[index]['rotSkyPos'] # radians
+            pointingRA= simdata[index][pointingRACol] # radians
+            pointingDec= simdata[index][pointingDecCol] # radians
+            rotSkyPos= simdata[index][rotSkyCol] # radians
             expMJD= simdata[index]['expMJD']
             
             # set up for the finding the chips
