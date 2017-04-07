@@ -206,7 +206,7 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
         if newAfterburner: burnerTag = 'newAfterburnerOutput_'
         rotDitherTag= ''
         if addRotDither: rotDitherTag= 'randomRotDithered_'
-        filename= '%s_chipPerVisitData_%sfID%d_%s_%s%sRegion_nside%s_%dTotChipsToSimulate'%(str(datetime.date.isoformat(datetime.date.today())),
+        filename= '%s_chipPerVisitData_%sfID%d_%s_%s%sRegion_nside%s_%dNonWFChipsToSimulate'%(str(datetime.date.isoformat(datetime.date.today())),
                                                                                             burnerTag, fiducialID, fiducialDither,
                                                                                             rotDitherTag, shapeTag, nside, sum(numChips))
         with open(filename+'.pickle', 'wb') as handle:
