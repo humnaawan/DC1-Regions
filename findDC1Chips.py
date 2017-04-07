@@ -112,29 +112,30 @@ def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
     printProgress('Total number of pixels in the region: %d'%(totPixels))
     
     # set up the slicer
-    hpSlicer= slicers.HealpixSlicer(nside= nside)
-    #hpSlicer.setupSlicer(simdata)    # slice data: know which pixels are observed in which visit
+    hpSlicer= slicers.HealpixSlicer(nside= nside, 
+                                    lonCol= pointingRACol, latCol= pointingDecCol,
+                                    rotSkyPosColName= rotSkyCol)
+    hpSlicer.setupSlicer(simdata)    # slice data: know which pixels are observed in which visit
     
     camera = LsstSimMapper().camera
     chipNames, obsIDs, expDates, fIDs, pixNums= [], [], [], [], []
 
     # find the possible fIDs that could come into the region.
-    valid_fields= findRegionFOVs(regionPixels, 'NoDither', simdata, nside= nside)
-    indObsInPixel= []   # all possibilites
-    for ID in valid_fields:   # run over all IDs that could come into the region
-        ind= np.where(simdata['fieldID']==ID)[0]
-        indObsInPixel+= list(ind)
+    #valid_fields= findRegionFOVs(regionPixels, 'NoDither', simdata, nside= nside)
+    #indObsInPixel= []   # all possibilites
+    #for ID in valid_fields:   # run over all IDs that could come into the region
+    #    ind= np.where(simdata['fieldID']==ID)[0]
+    #    indObsInPixel+= list(ind)
         
     prevPercent= 0.
     startTime= time.time()
     for p, pixel in enumerate(regionPixels):  # run over all the pixels in the region
         pixRA, pixDec= hpSlicer._pix2radec(pixel)    # radians returned
-        #indObsInPixel = hpSlicer._sliceSimData(pixel)   # indices in simData for when an observation
+        indObsInPixel = hpSlicer._sliceSimData(pixel)   # indices in simData for when an observation
                                                         # happened in this pixel
         
-        for index in indObsInPixel: #['idxs']:
-            # get data from simdata
-            # for identifying each visit
+        for index in indObsInPixel['idxs']:
+            # get data from simdata for identifying each visit
             expDate= simdata[index]['expDate']
             obsID= simdata[index]['obsHistID']
             fID= simdata[index]['fieldID']
