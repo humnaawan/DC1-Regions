@@ -30,8 +30,8 @@ def printProgress(whatToPrint, highlight= False, newLine= True):
     """
     append= ''
     if highlight: append= '\n############################################'
-    if newLine: print append + '\n## ' + whatToPrint
-    else: print '## ' + whatToPrint
+    if newLine: print(append + '\n## ' + whatToPrint)
+    else: print('## ' + whatToPrint)
     sys.stdout.flush()
     time.sleep(1.0)
         
@@ -128,7 +128,7 @@ def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
                 if key not in pixels_in_FOV[dither].keys():
                     pixels_in_FOV[dither][key]= []
                 pixels_in_FOV[dither][key].append(pixel)
-    print 'Number of fieldIDs in pixel_in_FOV for %s: %d' %(dither, len(pixels_in_FOV[dither].keys()))
+    print('Number of fieldIDs in pixel_in_FOV for %s: %d' %(dither, len(pixels_in_FOV[dither].keys())))
     return pixels_in_FOV
 
 def enclosingPolygon(radius, fieldRA, fieldDec):
