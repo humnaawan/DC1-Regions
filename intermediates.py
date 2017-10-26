@@ -10,7 +10,7 @@ import numpy as np
 
 __all__= ['printProgress', 'getSurveyHEALPixRADec', 'getSimData',
           'getFOVsHEALPixReln', 'enclosingPolygon', 'findRegionPixels',
-          'findContigFOVs', 'findRegionFOVs', 'findGoodRegions']
+          'findContigFOVs', 'findRegionFOVs', 'findGoodRegions', 'findFOVPixels']
 
 def printProgress(whatToPrint, highlight= False, newLine= True):
     """
@@ -34,7 +34,7 @@ def printProgress(whatToPrint, highlight= False, newLine= True):
     else: print('## ' + whatToPrint)
     sys.stdout.flush()
     time.sleep(1.0)
-        
+
 def getSurveyHEALPixRADec(coaddBundle):
     """
 
@@ -91,9 +91,9 @@ def getSimData(dbpath, filterBand, extraCols= [], newAfterburner= False):
     else:
         colnames = ['fieldID', 'fieldRA', 'fieldDec', 'rotSkyPos', 'expMJD', 'ditheredRA', 'ditheredDec'] + extraCols
     simdata = opsdb.fetchMetricData(colnames, sqlconstraint)
-    
+
     return simdata
-    
+
 def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
     """
 
@@ -101,7 +101,7 @@ def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
     Returns a dictionary pixels_in_FOV (keys= keys in pixelNum; observing stragies):
     each key points to a dictionary with keys= fieldID, pointing to the list of HEALPix pixels
     corresponding to the FOV.
- 
+
 
     Required Parameters
     -------------------
@@ -116,7 +116,7 @@ def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
     import lsst.sims.maf.slicers as slicers
     slicer= slicers.HealpixSlicer(nside= nside)
     slicer.setupSlicer(simdata)
-    
+
     pixels_in_FOV= {}
     for dither in pixelNum:
         pixels_in_FOV[dither]= {}
@@ -146,7 +146,7 @@ def enclosingPolygon(radius, fieldRA, fieldDec):
     def returnXYZ(ra, dec):
         c = SkyCoord(ra=ra*u.radian, dec=dec*u.radian)
         return c.cartesian.xyz
- 
+
     corners= np.zeros(shape=(4,3))
     corners[0,]= returnXYZ(fieldRA+radius, fieldDec-np.sqrt(3)*radius)
     corners[1,]= returnXYZ(fieldRA+radius, fieldDec+np.sqrt(3)*radius)
@@ -178,7 +178,7 @@ def findRegionPixels(fiducialID, simdata, nside, disc, FOV_radius):
         fiducialRA, fiducialDec= fixedRA, fixedDec
         #corners= enclosingPolygon(FOV_radius, fiducialRA, fiducialDec)
         #regionPixels= hp.query_polygon(nside, corners)    # HEALpixel numbers
-        
+
         contigIDList= findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
                                      disc= False, nside= nside)
 
@@ -197,7 +197,7 @@ def findRegionPixels(fiducialID, simdata, nside, disc, FOV_radius):
             fixedDec= simdata[ind[0]]['fieldDec']
             c = SkyCoord(ra=fixedRA*u.radian, dec= fixedDec*u.radian)
             regionPixels= hp.query_disc(nside= nside, vec=c.cartesian.xyz, radius= FOV_radius, inclusive= True)
-        
+
             allPixels+= list(regionPixels)
         regionPixels= np.unique(allPixels)
     else:
@@ -224,7 +224,7 @@ def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
     * fiducialID: int: fieldID on which the region is based on.
     * FOV_radius: float: radius of the FOV (radians)
     * simdata: np.array: array containing OpSim columns (must have fieldID for this function to work).
-    
+
     Optional Parameters
     -------------------
     * disc: bool: set to True if want disc-like region; False for rectangular. Default: True
@@ -234,7 +234,7 @@ def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
     import lsst.sims.maf.slicers as slicers
     slicer= slicers.HealpixSlicer(nside= nside, verbose= False)
     slicer.setupSlicer(simdata)
-    
+
     def returnIDs(ra, dec):
         p= hp.ang2pix(nside, np.pi/2.0-dec, ra)
         ind = slicer._sliceSimData(p)
@@ -253,11 +253,11 @@ def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
         ra= fiducialRA
         dec= fiducialDec-FOV_radius*np.sqrt(3)/2.
         contList+= returnIDs(ra, dec)
-        
+
         ra= fiducialRA-FOV_radius*3/2.
         dec= fiducialDec
         contList+= returnIDs(ra, dec)
-        
+
         ra= fiducialRA+FOV_radius*3/2.
         dec= fiducialDec
         contList+= returnIDs(ra, dec)
@@ -266,15 +266,15 @@ def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
         ra= fiducialRA
         dec= fiducialDec-2*FOV_radius*np.sqrt(3)/2.
         contList+= returnIDs(ra, dec)
-        
+
         ra= fiducialRA-FOV_radius*3/2.
         dec= fiducialDec-FOV_radius*np.sqrt(3)/2.
         contList+= returnIDs(ra, dec)
-    
+
         ra= fiducialRA+FOV_radius*3/2.
         dec= fiducialDec-FOV_radius*np.sqrt(3)/2.
         contList+= returnIDs(ra, dec)
-        
+
     return np.unique(contList)
 
 def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
@@ -287,7 +287,7 @@ def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
     * regionPixels: array: array containing the HEALPIx pixel numbers in the region of interest.
     * dither: str: dither strategy to focus on.
     * simdata: np.array: array containing OpSim columns (must have fieldID for here).
-    
+
     Optional Parameters
     -------------------
     * nside: int: HEALPix resolution parameters. Default: 256
@@ -296,7 +296,7 @@ def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
     import lsst.sims.maf.slicers as slicers
     slicer= slicers.HealpixSlicer(nside= nside)
     slicer.setupSlicer(simdata)
-    
+
     idList= []
     for p in regionPixels:
         ind = slicer._sliceSimData(p)
@@ -333,7 +333,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     * nside: int: HEALPix resolution parameter. Defaut: 256
     * depthDiffThreshold: float: region will be considered good if median depth in the region is within
                                  this threshold of survey median depth. Default: 0.01
-    * rangeThreshold: flat: region will be considered if good if range of depth in the region (i.e. 
+    * rangeThreshold: flat: region will be considered if good if range of depth in the region (i.e.
                             difference max-min depth) is within the specified rangeThreshold.
                             Default: 0.3
     * allIDs: bool: set to False to consider only a subset of FOVs; will plot things out. Default: True
@@ -346,11 +346,11 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     # a region is 'good' if abs(median depth in the region -surveyMedianDepth)<depthDiffThreshold and rangeDepth in the region < rangeThreshold
     goodCenterIDs, goodPixelNums, rangeInDepth, diffMedianRegionSurvey= [], [], [], []
     fiducialRAs, fiducialDecs, contigIDs, fiducialGalacticLat=  [], [], [], []
-    
+
     inSurvey= np.where(coaddBundle[focusDither].metricValues.mask==False)[0]
     surveyMedianDepth= np.median(coaddBundle[focusDither].metricValues.data[inSurvey])
     printProgress('Mean survey depth for %s: %f'% (focusDither, surveyMedianDepth))
-    
+
     considerIDs= pixels_in_FOV[focusDither].keys()
     if not allIDs: considerIDs= IDsToTestWith
 
@@ -365,7 +365,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
             typicalDepth= np.median(coaddBundle[focusDither].metricValues.data[regionPixels])
             diffDepth= abs(typicalDepth-surveyMedianDepth)
             depthRange= abs(max(coaddBundle[focusDither].metricValues.data[regionPixels])-min(coaddBundle[focusDither].metricValues.data[regionPixels]))
-            
+
             if ((diffDepth<depthDiffThreshold) and (depthRange<rangeThreshold)):
                 goodCenterIDs.append(ID)
                 goodPixelNums.append(regionPixels)
@@ -382,9 +382,9 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
             check.metricValues.data[:]= 0
             check.metricValues.data[regionPixels]= 1000.
             check.metricValues.data[pixels_in_FOV[focusDither][ID]]= 26.4
-            
+
             plt.clf()
-            hp.cartview(check.metricValues.filled(check.slicer.badval), 
+            hp.cartview(check.metricValues.filled(check.slicer.badval),
                         flip='astro', rot=(0,0,0) ,
                         lonra= raRange, latra= decRange,
                         min= 26.3, max= 26.5, title= '', cbar=False)
@@ -395,7 +395,7 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
             fig= plt.gcf()
             cbaxes = fig.add_axes([0.1, 0.25, 0.8, 0.04]) # [left, bottom, width, height]
             cb = plt.colorbar(im,  orientation='horizontal',
-                              format= '%.1f', cax = cbaxes) 
+                              format= '%.1f', cax = cbaxes)
             plt.show()
 
     printProgress('Total number of good regions founds: %d'%(len(goodCenterIDs)), highlight= True)
@@ -408,6 +408,33 @@ def findGoodRegions(focusDither, simdata, coaddBundle, FOV_radius, pixels_in_FOV
     output['fiducialDec']= np.array(fiducialDecs)
     output['fiducialGalacticLat']= np.array(fiducialGalacticLat)
     output['contigIDs']= contigIDs
-    
+
     return output
 
+
+def findFOVPixels(fiducialID, simdata, nside, FOV_radius):
+    """
+
+    Find the pixels inside specified (undithered) FOV (identified by a field ID).
+    ** Uses the undithered pointing info; looks at circular region
+       centered on FOV's pointingRA, pointingDec.
+
+    Required Parameters
+    -------------------
+    * fiducialID: int: fieldID for the FOV.
+    * simdata: np.array: array containing OpSim columns (must have fieldID, fieldRA, fieldDec).
+    * nside: int: HEALPix resolution parameter.
+    * FOV_radius: float: radius of the FOV in radians.
+
+    """
+    ind= np.where(simdata[:]['fieldID']== fiducialID)[0]
+    # fieldRA, fieldDec remain fixed for NoDither; dont change with expMJD.
+    # use as the 'center' of the enclosing region (disc or rectangle).
+    fixedRA= simdata[ind[0]]['fieldRA']
+    fixedDec= simdata[ind[0]]['fieldDec']
+
+    fiducialRA, fiducialDec= fixedRA, fixedDec
+    c = SkyCoord(ra=fiducialRA*u.radian, dec= fiducialDec*u.radian)
+    regionPixels= hp.query_disc(nside= nside, vec=c.cartesian.xyz, radius= FOV_radius)
+
+    return [fiducialRA, fiducialDec, regionPixels]
