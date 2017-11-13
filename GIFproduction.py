@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from lsst.sims.coordUtils import raDecFromPixelCoords
 from numpy.lib.recfunctions import append_fields
 from lsst.obs.lsstSim import LsstSimMapper
-from lsst.sims.utils import ObservationMetaData
+from lsst.sims.utils import ObservationMetaData, altAzPaFromRaDec
 from lsst.sims.coordUtils import getCornerRaDec
 from readPython2Pickle import pickleRead # needed since working in Python 3.
 import healpy as hp
@@ -91,7 +91,7 @@ def movie(filepath, nside, simdata, fIDmovie, histIDmovie, dataTag,
     # non-science chips
     wavefront= ['R:4,0 S:0,2,A', 'R:4,0 S:0,2,B','R:0,4 S:2,0,A', 'R:0,4 S:2,0,B',
                 'R:0,0 S:2,2,A', 'R:0,0 S:2,2,B','R:4,4 S:0,0,A', 'R:4,4 S:0,0,B']
-    nonScience= ['R:0,0 S:1,2', 'R:0,0 S:2,1', 'R:0,4 S:1,0',
+    guiders= ['R:0,0 S:1,2', 'R:0,0 S:2,1', 'R:0,4 S:1,0',
                 'R:0,4 S:2,1', 'R:4,0 S:0,1', 'R:4,0 S:1,2', 'R:4,4 S:0,1', 'R:4,4 S:1,0']
 
     def pixNum2RaDec(nside, pix):
@@ -168,22 +168,42 @@ def movie(filepath, nside, simdata, fIDmovie, histIDmovie, dataTag,
             pixRA, pixDec= pixNum2RaDec(FOVpixs[fid], nside)
             axes.plot(pixRA, pixDec, '.', color= 'k', alpha= 0.05)
 
+            # plot the FOV boundary/center.
+            pointingRA, pointingDec= np.radians(obsMetaData[hid].pointingRA), np.radians(obsMetaData[hid].pointingDec)
+            axes.plot(pointingRA, pointingDec, 'x', color= 'k')
+            axes.plot(pointingRA+delx/np.cos(pointingDec), pointingDec+dely, color= 'k', label= 'FOV')
+
             # get/plot the chips
             for chip in inputData['chipNames'][i]:
                 x, y= getXYchips(chip, camera, obsMetaData[hid])  # chip corners
-                pointingRA, pointingDec= np.radians(obsMetaData[hid].pointingRA), np.radians(obsMetaData[hid].pointingDec)
-                axes.plot(pointingRA, pointingDec, 'x', color= 'k')
-                axes.plot(pointingRA+delx/np.cos(pointingDec), pointingDec+dely, color= 'k', label= 'FOV')
                 axes.fill(x,y, 'b', alpha=0.2, edgecolor='r')
 
             # plot the wavefront sensors
-            for chip in wavefront:
+            wavefrontColors= ['r', 'c', 'b', 'm', 'r', 'b', 'c', 'm']
+            x0, y0, x1, y1= 0., 0., 0., 0
+            for ith, chip in enumerate(wavefront):
                 x, y= getXYchips(chip, camera,obsMetaData[hid])
-                axes.fill(x,y, 'c', alpha=1, edgecolor='c')
+                if (ith==0):
+                    x0, y0= x[3], y[3]
+                if (ith==2):
+                    x1, y1= x[3], y[3]
+                axes.fill(x,y, wavefrontColors[ith], alpha=1., edgecolor=wavefrontColors[ith])
+            delx_arrow= pointingRA-x0
+            dely_arrow= pointingDec-y0
+            axes.axes.arrow(x0, y0, delx_arrow, dely_arrow, color= 'k',
+                            width= 0.001/2., head_width= 0.003)
+            axes.axes.arrow(x0+delx_arrow, y0+dely_arrow, delx_arrow, dely_arrow,
+                            color= 'k', width= 0.001/2., head_width= 0.0001/2.)
+            #axes.axes.arrow(x0, y0, delx_arrow1, dely_arrow1, color= 'k', width= 0.001/2.)
+            #axes.axes.arrow(x0+delx_arrow1, y0+dely_arrow1, delx_arrow1*2, dely_arrow1*2,
+            #                color= 'k', width= 0.001/2., head_width= 0.0002)
+            #axes.axes.arrow(x0+3*delx_arrow1, y0+3*dely_arrow1, delx_arrow1, dely_arrow1,
+            #                color= 'k', width= 0.001/2., head_width= 0.001/2.)
+
             # plot the guidors
-            for chip in nonScience:
+            for chip in guiders:
                 x, y= getXYchips(chip, camera,obsMetaData[hid])
-                axes.fill(x,y, 'y', alpha=1, edgecolor='y')
+                axes.fill(x,y, 'y', alpha=1.0, edgecolor='y')
 
             # set up for title: include histIS, filter, rot angle
             inds= np.where(simdata['obsHistID']==hid)[0]
@@ -199,6 +219,10 @@ def movie(filepath, nside, simdata, fIDmovie, histIDmovie, dataTag,
                                                                         filterObs)
             title+= 'rotSkyPos: %s, dithRotSkyPos: %s \n'%(rotSkyPos, dithrotSkyPos)
             title+= 'rotTelPos: %s, dithRotTelPos: %s \n'%(rotTelPos, dithrotTelPos)
+            title+= 'parallacticAngle= rotTelPos-rotSkyPos : %s \n'%(rotTelPos-rotSkyPos)
+            #title+= 'parallacticAngle from utils: %s \n'%np.radians(altAzPaFromRaDec(obsMetaData[hid].pointingRA,
+            #                                                    obsMetaData[hid].pointingDec,
+            #                                                    obsMetaData[hid])[2])
             title+= '$\Delta$rotSkyPos= dithrotSkyPos-rotSkyPos : %s \n'%(dithrotSkyPos-rotSkyPos)
             title+= '$\Delta$rotTelPos= dithRotTelPos-rotTelPos : %s \n'%(dithrotTelPos-rotTelPos)
 
@@ -216,11 +240,12 @@ def movie(filepath, nside, simdata, fIDmovie, histIDmovie, dataTag,
             axes.tick_params(axis='y', labelsize=fontsize)
 
             # set up legend
-            blue = mpatches.Patch(color='blue', edgecolor= 'red', label= 'DC1 Chips', alpha= 0.2)
-            yellow = mpatches.Patch(color='y' , label= 'non-science')
-            cyan = mpatches.Patch(color='c', label= 'wavefront')
-            handles, labels = axes.get_legend_handles_labels()
-            axes.legend(handles= [blue, yellow, cyan], loc= 'upper left')
+            blue = mpatches.Patch(facecolor='b', edgecolor= 'red', label= 'DC1 Chips', alpha= 0.2)
+            yellow = mpatches.Patch(facecolor='y' , label= 'guiders', alpha= 1.0)
+            handles=  [blue, yellow]
+            for c in wavefrontColors[0:4]:
+                handles.append(mpatches.Patch(color=c, label= 'wavefront'))
+            axes.legend(handles= handles, loc= 'upper left')
 
             fig.set_size_inches(10,10)
             # save each png.
@@ -257,23 +282,38 @@ def movie(filepath, nside, simdata, fIDmovie, histIDmovie, dataTag,
                 pixRA, pixDec= pixNum2RaDec(FOVpixs[fid], nside)
                 axes.plot(pixRA, pixDec, '.', color= 'k', alpha= 0.05)
 
-                # get/plot the chips
                 hid= inputData['obsHistID'][fid_visitInd]
+                # plot the FOV center/boundary.
+                pointingRA, pointingDec= np.radians(obsMetaData[hid].pointingRA), np.radians(obsMetaData[hid].pointingDec)
+                axes.plot(pointingRA, pointingDec, 'x', color= 'k')
+                axes.plot(pointingRA+delx/np.cos(pointingDec), pointingDec+dely, color= 'k', label= 'FOV')
+
+                # get/plot the chips
                 for chip in inputData['chipNames'][fid_visitInd]:
                     x, y= getXYchips(chip, camera, obsMetaData[hid])
-                    pointingRA, pointingDec= np.radians(obsMetaData[hid].pointingRA), np.radians(obsMetaData[hid].pointingDec)
-                    axes.plot(pointingRA, pointingDec, 'x', color= 'k')
-                    axes.plot(pointingRA+delx/np.cos(pointingDec), pointingDec+dely, color= 'k', label= 'FOV')
                     axes.fill(x,y, 'b', alpha=0.2, edgecolor='r')
 
                 # plot the wavefront sensors
-                for chip in wavefront:
+                wavefrontColors= ['r', 'c', 'b', 'm', 'r', 'b', 'c', 'm']
+                x0, y0, x1, y1= None, None, None, None
+                for ith, chip in enumerate(wavefront):
                     x, y= getXYchips(chip, camera,obsMetaData[hid])
-                    axes.fill(x,y, 'c', alpha=1, edgecolor='c')
-                # plot the guidors
-                for chip in nonScience:
+                    if (ith==0):
+                        x0, y0= x[0], y[0]
+                    if (ith==len(wavefront)):
+                        x1, y1= x[0], y[0]
+                    axes.fill(x,y, wavefrontColors[ith], alpha=1., edgecolor=wavefrontColors[ith])
+                delx_arrow= pointingRA-x0
+                dely_arrow= pointingDec-y0
+                axes.axes.arrow(x0, y0, delx_arrow, dely_arrow, color= 'k',
+                                width= 0.001/2., head_width= 0.003)
+                axes.axes.arrow(x0+delx_arrow, y0+dely_arrow, delx_arrow, dely_arrow,
+                                color= 'k', width= 0.001/2., head_width= 0.0001/2.)
+
+                # plot the guiders
+                for chip in guiders:
                     x, y= getXYchips(chip, camera,obsMetaData[hid])
-                    axes.fill(x,y, 'y', alpha=1, edgecolor='y')
+                    axes.fill(x,y, 'y', alpha=1., edgecolor='y')
 
                 # set up for title
                 inds= np.where(simdata['obsHistID']==hid)[0]
@@ -289,6 +329,7 @@ def movie(filepath, nside, simdata, fIDmovie, histIDmovie, dataTag,
                                                                 filterObs)
                 title+= 'rotSkyPos: %s, dithRotSkyPos: %s \n'%(rotSkyPos, dithrotSkyPos)
                 title+= 'rotTelPos: %s, dithRotTelPos: %s \n'%(rotTelPos, dithrotTelPos)
+                title+= 'parallacticAngle= rotTelPos-rotSkyPos : %s \n'%(rotTelPos-rotSkyPos)
                 title+= '$\Delta$rotSkyPos= dithrotSkyPos-rotSkyPos : %s \n'%(dithrotSkyPos-rotSkyPos)
                 title+= '$\Delta$rotTelPos= dithRotTelPos-rotTelPos : %s \n'%(dithrotTelPos-rotTelPos)
                 axes.set_title(title,  fontsize= fontsize, )
@@ -300,11 +341,13 @@ def movie(filepath, nside, simdata, fIDmovie, histIDmovie, dataTag,
                 axes.tick_params(axis='y', labelsize=fontsize)
 
                 # legend
-                blue = mpatches.Patch(color='blue', edgecolor= 'red', label= 'DC1 Chips', alpha= 0.2)
-                yellow = mpatches.Patch(color='y' , label= 'non-science')
-                cyan = mpatches.Patch(color='c', label= 'wavefront')
-                handles, labels = axes.get_legend_handles_labels()
-                axes.legend(handles= [blue, yellow, cyan], loc= 'upper left')
+                blue = mpatches.Patch(facecolor='b', edgecolor= 'red', label= 'DC1 Chips', alpha= 0.2)
+                yellow = mpatches.Patch(facecolor='y' , label= 'guiders', alpha= 1.0)
+                handles=  [blue, yellow]
+                for c in wavefrontColors[0:4]:
+                    handles.append(mpatches.Patch(color=c, label= 'wavefront'))
+                axes.legend(handles= handles, loc= 'upper left')
+
                 # axes lims.
                 axes.set_xlim([xmin-factor, xmax+factor])
                 axes.set_ylim([ymin-factor, ymax+factor])
