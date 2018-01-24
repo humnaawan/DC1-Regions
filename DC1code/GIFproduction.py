@@ -1,4 +1,5 @@
-from intermediates import *
+from DC1code.intermediates import *
+from DC1code.readPython2Pickle import pickleRead # needed since working in Python 3.
 import numpy as np
 import matplotlib.pyplot as plt
 from lsst.sims.coordUtils import raDecFromPixelCoords
@@ -6,11 +7,12 @@ from numpy.lib.recfunctions import append_fields
 from lsst.obs.lsstSim import LsstSimMapper
 from lsst.sims.utils import ObservationMetaData, altAzPaFromRaDec
 from lsst.sims.coordUtils import getCornerRaDec
-from readPython2Pickle import pickleRead # needed since working in Python 3.
 import healpy as hp
 import os
 import imageio
 import matplotlib.patches as mpatches
+
+__all__= ['obsMetaDataDict', 'movie', 'GIFproduction']
 
 def obsMetaDataDict(obsHistIDs, simdata, transDithered, rotDithered):
     """

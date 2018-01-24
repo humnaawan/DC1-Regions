@@ -1,6 +1,8 @@
 import numpy as np
-from plotFunctions import *
-from intermediates import *
+from DC1code.plotFunctions import *
+from DC1code.intermediates import *
+
+__all__= ['findDC1Regions']
 
 def findDC1Regions(coaddBundle, dbpath, plotTestPlots= True,
                    filterBand= 'i', depthDiffThreshold= 0.005, rangeThreshold= 0.5, nside= 256,

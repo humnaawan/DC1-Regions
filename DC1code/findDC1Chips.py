@@ -3,12 +3,14 @@ import lsst.sims.maf.slicers as slicers
 from lsst.obs.lsstSim import LsstSimMapper
 from lsst.sims.utils import ObservationMetaData
 from lsst.sims.coordUtils import chipNameFromRaDec
-from intermediates import printProgress, getSimData, findRegionPixels, findRegionFOVs
+from DC1code.intermediates import printProgress, getSimData, findRegionPixels, findRegionFOVs
 import pickle
 import time
 import os
 import datetime
 from numpy.lib.recfunctions import append_fields
+
+__all__= ['findDC1Chips']
 
 def findDC1Chips(dbpath, newAfterburner, fiducialDither, fiducialID,
                  addRotDither= False, nside= 512,

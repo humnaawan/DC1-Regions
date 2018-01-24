@@ -1,5 +1,7 @@
 import pickle
 
+__all__= ['pickleRead']
+
 # need to deal with Python 2 objects explicitly in Py3.
 def pickleRead(handle):
     read= pickle.load(handle, encoding='latin-1')

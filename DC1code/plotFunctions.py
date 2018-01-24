@@ -8,7 +8,7 @@ import sys
 import time
 import numpy as np
 
-from intermediates import printProgress, findRegionPixels, findRegionFOVs
+from DC1code.intermediates import printProgress, findRegionPixels, findRegionFOVs
 
 __all__= ['plotFOV', 'plotRegion', 'buildAndPlotRegion']
 
@@ -158,7 +158,7 @@ def buildAndPlotRegion(fID, simdata, coaddBundle, FOV_radius, pixels_in_FOV,
     for dither in focusDither:
         # need to find all the FOVs involved (even partially)
         idList= findRegionFOVs(regionPixels, dither, simdata, nside= 256)
-        print 'FID List for %s: [%s]' % (dither,  ", ".join([str(x) for x in idList]))
+        print('FID List for %s: [%s]' % (dither,  ", ".join([str(x) for x in idList])))
             
         check= copy.deepcopy(coaddBundle[dither])
         check.metricValues.data[:]= 0

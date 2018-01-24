@@ -7,6 +7,9 @@ import pandas as pd
 import sys
 import time
 import numpy as np
+import lsst.sims.maf.db as db
+import lsst.sims.maf.utils as mafUtils
+import lsst.sims.maf.slicers as slicers
 
 __all__= ['printProgress', 'getSurveyHEALPixRADec', 'getSimData',
           'getFOVsHEALPixReln', 'enclosingPolygon', 'findRegionPixels',
@@ -77,8 +80,6 @@ def getSimData(dbpath, filterBand, extraCols= [], newAfterburner= False):
 
     """
     # get the columns we care about in simdata.
-    import lsst.sims.maf.db as db
-    import lsst.sims.maf.utils as mafUtils
     #dbfile = path+'minion_1016_sqlite.db'
     opsdb = db.OpsimDatabase(dbpath)
     propIds, propTags = opsdb.fetchPropInfo()
@@ -113,7 +114,6 @@ def getFOVsHEALPixReln(pixelNum, simdata, nside= 256):
     * nside: int: HEALPix resolution parameters. Default: 256
 
     """
-    import lsst.sims.maf.slicers as slicers
     slicer= slicers.HealpixSlicer(nside= nside)
     slicer.setupSlicer(simdata)
 
@@ -231,7 +231,6 @@ def findContigFOVs(fiducialRA, fiducialDec, fiducialID, FOV_radius, simdata,
     * nside: int: HEALPix resolution parameters. Default: 256
 
     """
-    import lsst.sims.maf.slicers as slicers
     slicer= slicers.HealpixSlicer(nside= nside, verbose= False)
     slicer.setupSlicer(simdata)
 
@@ -293,7 +292,6 @@ def findRegionFOVs(regionPixels, dither, simdata, nside= 256):
     * nside: int: HEALPix resolution parameters. Default: 256
 
     """
-    import lsst.sims.maf.slicers as slicers
     slicer= slicers.HealpixSlicer(nside= nside)
     slicer.setupSlicer(simdata)
 
